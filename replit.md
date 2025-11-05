@@ -89,18 +89,25 @@ See `README.md` and `QUICK_START.md` for detailed instructions.
 - Values admin interfaces for non-technical users
 
 ## Known Limitations in Replit
-- **New audio processing** - Requires ML dependencies too large for Replit (process locally, upload results)
-- **Redis/RQ workers** - Not running (not needed for viewing pre-processed data)
-- **Langflow** - Not available (replaced with Azure OpenAI direct calls)
+- **New audio processing** - Requires ML dependencies too large for Replit (transcription with Whisper must be done locally, then upload results to Replit for visualization)
+- **Persona evaluations** - Fully functional using Azure OpenAI API calls (no local ML dependencies needed)
 
 ## Running in Replit
 The application is currently running with 4 workflows:
 1. **backend** - FastAPI server on port 8000
 2. **dashboard** - Dash visualization on port 5000 (webview)
 3. **redis** - Redis server on port 6000
-4. **worker** - RQ worker (not running - not needed for viewing)
+4. **worker** - RQ worker for processing persona evaluations via Azure OpenAI
 
 Simply open the webview to see the dashboard with pre-processed audio analysis.
+
+### Re-evaluation Feature
+The re-evaluation feature is fully functional in Replit:
+1. Edit any persona in the Admin panel
+2. Click "Save Changes"
+3. Click "🔄 Re-evaluate Audio" in the success toast
+4. Wait ~15-60 seconds for Azure OpenAI to process all segments
+5. Dashboard auto-refreshes with updated evaluations
 
 ## Deployment
 For production deployment guidance, see `DEPLOYMENT.md` which covers:

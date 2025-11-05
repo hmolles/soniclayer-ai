@@ -21,17 +21,13 @@ def extract_segments(transcript_segments, classifier_results, persona_feedback_l
             "tone": classifier_results[i]["tone"],
         }
 
-        # Add persona feedback if available
+        # Add persona feedback if available (dynamically include all personas)
         if persona_feedback_list and i < len(persona_feedback_list):
             persona_data = persona_feedback_list[i]
             
-            # Add GenZ feedback
-            if "genz" in persona_data:
-                segment_data["genz"] = persona_data["genz"]
-            
-            # Add Advertiser feedback
-            if "advertiser" in persona_data:
-                segment_data["advertiser"] = persona_data["advertiser"]
+            # Dynamically add all persona feedback
+            for persona_id, feedback in persona_data.items():
+                segment_data[persona_id] = feedback
 
         # Flag repeated topics
         if i > 0 and classifier_results[i]["topic"] == classifier_results[i - 1]["topic"]:
