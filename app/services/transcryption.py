@@ -6,7 +6,7 @@ from openai import AzureOpenAI
 # Azure Whisper configuration
 AZURE_WHISPER_ENDPOINT = "https://admin-mhlg381w-northcentralus.cognitiveservices.azure.com"
 AZURE_WHISPER_KEY = os.getenv("AZURE_WHISPER_KEY")
-AZURE_WHISPER_API_VERSION = "2024-06-01"
+AZURE_WHISPER_API_VERSION = "2024-02-01"  # Updated to stable version
 AZURE_WHISPER_DEPLOYMENT_NAME = "whisper"  # Deployment name from Azure
 
 # Rate limiting: 3 requests per minute
@@ -94,9 +94,9 @@ def transcribe_audio_with_timestamps(file_bytes: bytes, segment_duration: float 
         
         # Iterate through Azure Whisper's segments
         for whisper_segment in result.segments:
-            segment_start = whisper_segment.get("start", 0.0)
-            segment_end = whisper_segment.get("end", segment_start + segment_duration)
-            segment_text = whisper_segment.get("text", "").strip()
+            segment_start = whisper_segment.start if hasattr(whisper_segment, 'start') else 0.0
+            segment_end = whisper_segment.end if hasattr(whisper_segment, 'end') else (segment_start + segment_duration)
+            segment_text = whisper_segment.text.strip() if hasattr(whisper_segment, 'text') else ""
             
             # If adding this text would exceed our target duration, finalize current segment
             if current_segment["text"] and (segment_end - current_segment["start"]) > segment_duration:
@@ -121,7 +121,7 @@ def transcribe_audio_with_timestamps(file_bytes: bytes, segment_duration: float 
         # Add final segment
         if current_segment["text"]:
             last_segment = result.segments[-1] if result.segments else None
-            current_segment["end"] = last_segment.get("end", current_segment["start"] + segment_duration) if last_segment else current_segment["start"] + segment_duration
+            current_segment["end"] = last_segment.end if (last_segment and hasattr(last_segment, 'end')) else (current_segment["start"] + segment_duration)
             segments.append({
                 "start": round(current_segment["start"], 2),
                 "end": round(current_segment["end"], 2),
