@@ -138,6 +138,8 @@ def render_dashboard_page(audio_id):
         dcc.Store(id="user-clicked", data=False),
         dcc.Store(id='current-time-store', data=0),
         dcc.Store(id='current-audio-id', data=audio_id),
+        dcc.Store(id='segments-store', data=segments),
+        dcc.Store(id='waveform-data-store', data={'time': time.tolist(), 'amplitude': amplitude.tolist()}),
     ])
 
 # Main app layout with routing
@@ -515,91 +517,50 @@ app.clientside_callback(
     prevent_initial_call=True
 )
 
-# TODO: Re-enable these interactive callbacks after refactoring for dynamic audio loading
-# They currently reference module-level segments/time/amplitude that don't exist anymore
+# Callback 1: Handle waveform clicks for seeking
+@app.callback(
+    Output("segment-metadata", "children"),
+    Output("user-clicked", "data"),
+    Input("waveform-graph", "clickData"),
+    State("segments-store", "data"),
+    prevent_initial_call=True
+)
+def handle_waveform_click(click_data, segments):
+    if click_data is None or not segments:
+        return dash.no_update, dash.no_update
+    
+    # Get clicked time from waveform
+    clicked_time = click_data['points'][0]['x']
+    
+    # Find the segment containing this time
+    active_segment = next(
+        (seg for seg in segments if seg["start"] <= clicked_time <= seg["end"]),
+        None
+    )
+    
+    # Update metadata
+    metadata = render_metadata_panel(active_segment) if active_segment else html.Div(
+        "No segment at this time position.",
+        style={"padding": "20px", "color": "#6b7280"}
+    )
+    
+    # Set user-clicked flag
+    return metadata, True
 
-# # Global state to track current segment
-# _current_segment_index = -1
-
-# # Callback 1: Auto-update waveform and metadata during playback
-# @app.callback(
-#     Output("waveform-graph", "figure"),
-#     Output("segment-metadata", "children", allow_duplicate=True),
-#     Output("user-clicked", "data", allow_duplicate=True),
-#     Input('current-time-store', 'data'),
-#     State("user-clicked", "data"),
-#     prevent_initial_call=True
-# )
-# def auto_update_playback(current_time, user_clicked):
-#     global _current_segment_index
-#     
-#     # If user just clicked, reset flag and return
-#     if user_clicked:
-#         return dash.no_update, dash.no_update, False
-#     
-#     # Skip if no valid time
-#     if current_time is None or current_time < 0:
-#         return dash.no_update, dash.no_update, False
-#     
-#     # Find active segment
-#     active_segment = None
-#     active_index = -1
-#     for i, seg in enumerate(segments):
-#         if seg["start"] <= current_time <= seg["end"]:
-#             active_segment = seg
-#             active_index = i
-#             break
-#     
-#     # No matching segment
-#     if not active_segment:
-#         return dash.no_update, dash.no_update, False
-#     
-#     # Only update metadata if we crossed into a new segment
-#     if active_index != _current_segment_index:
-#         _current_segment_index = active_index
-#         # Update waveform cursor and metadata
-#         fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time)
-#         metadata = render_metadata_panel(active_segment)
-#         return fig, metadata, False
-#     else:
-#         # Same segment - just update cursor, no metadata change
-#         fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time)
-#         return fig, dash.no_update, False
-
-# # Callback 2: Handle waveform clicks for seeking
-# @app.callback(
-#     Output("segment-metadata", "children"),
-#     Output("user-clicked", "data"),
-#     Input("waveform-graph", "clickData"),
-#     prevent_initial_call=True
-# )
-# def handle_waveform_click(click_data):
-#     if click_data is None:
-#         return dash.no_update, dash.no_update
-#     
-#     # Get clicked time from waveform
-#     clicked_time = click_data['points'][0]['x']
-#     
-#     # Find the segment containing this time
-#     active_segment = next(
-#         (seg for seg in segments if seg["start"] <= clicked_time <= seg["end"]),
-#         None
-#     )
-#     
-#     # Update metadata
-#     metadata = render_metadata_panel(active_segment) if active_segment else "No segment at this time position."
-#     
-#     # Seek player to clicked time and set user-clicked flag
-#     return metadata, True
-
-# # Callback 3: Initialize metadata panel on first load
-# @app.callback(
-#     Output("segment-metadata", "children", allow_duplicate=True),
-#     Input("waveform-graph", "id"),
-#     prevent_initial_call='initial_duplicate'
-# )
-# def initialize_metadata(_):
-#     return render_metadata_panel(segments[0]) if segments else "No segments available."
+# Callback 2: Initialize metadata panel on first load
+@app.callback(
+    Output("segment-metadata", "children", allow_duplicate=True),
+    Input("segments-store", "data"),
+    prevent_initial_call='initial_duplicate'
+)
+def initialize_metadata(segments):
+    if segments and len(segments) > 0:
+        return render_metadata_panel(segments[0])
+    else:
+        return html.Div(
+            "No segments available for this audio file.",
+            style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}
+        )
 
 if __name__ == "__main__":
     print(f"\n🚀 Starting dashboard server...")
