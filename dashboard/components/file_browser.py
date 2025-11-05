@@ -40,7 +40,8 @@ def render_file_browser():
             html.Div([
                 html.Span("🎵", style={
                     "fontSize": "32px",
-                    "marginRight": "12px"
+                    "marginRight": "12px",
+                    "flexShrink": "0"
                 }),
                 html.Div([
                     html.Div(short_id, style={
@@ -50,11 +51,17 @@ def render_file_browser():
                         "marginBottom": "4px"
                     }),
                     html.Div(audio["filename"], style={
-                        "fontSize": "12px",
+                        "fontSize": "11px",
                         "color": "#6b7280",
-                        "fontFamily": "monospace"
+                        "fontFamily": "monospace",
+                        "wordBreak": "break-all",
+                        "lineHeight": "1.4"
                     })
-                ])
+                ], style={
+                    "flex": "1",
+                    "minWidth": "0",
+                    "overflow": "hidden"
+                })
             ], style={
                 "display": "flex",
                 "alignItems": "center",
