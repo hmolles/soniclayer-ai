@@ -142,14 +142,15 @@ def create_file_sidebar():
                 "display": "flex",
                 "alignItems": "center",
                 "width": "100%",
-                "padding": "12px",
-                "marginBottom": "4px",
-                "backgroundColor": "#eff6ff" if is_selected else "#f9fafb",
-                "borderRadius": "6px",
+                "padding": "14px",
+                "marginBottom": "12px",
+                "backgroundColor": "#ffffff" if not is_selected else "#eff6ff",
+                "border": f"2px solid {'#3b82f6' if is_selected else '#e5e7eb'}",
+                "borderRadius": "10px",
                 "cursor": "pointer",
-                "border": "2px solid #3b82f6" if is_selected else "1px solid #e5e7eb",
-                "transition": "all 0.2s",
-                "textAlign": "left"
+                "textAlign": "left",
+                "transition": "all 0.2s ease",
+                "boxShadow": "0 1px 2px rgba(0,0,0,0.05)" if not is_selected else "0 4px 6px rgba(59, 130, 246, 0.15)"
             })
             
             file_items.append(item)
