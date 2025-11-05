@@ -46,6 +46,10 @@
         reverseMappings[dark] = light;
     }
     
+    // Track if we're currently swapping colors to prevent infinite loops
+    let isSwapping = false;
+    let observer = null;
+    
     // Check for saved user preference or default to light mode
     const savedTheme = localStorage.getItem('theme') || 'light';
     
@@ -59,6 +63,9 @@
     
     // Function to swap colors in inline styles
     function swapInlineColors(isDark) {
+        if (isSwapping) return; // Prevent re-entry
+        isSwapping = true;
+        
         const mappings = isDark ? colorMappings : reverseMappings;
         const elements = document.querySelectorAll('[style]');
         
@@ -113,6 +120,7 @@
         });
         
         console.log('[Dark Mode] Swapped colors in', elements.length, 'elements');
+        isSwapping = false;
     }
     
     // Helper function to convert RGB to hex
@@ -135,6 +143,35 @@
         swapInlineColors(false);
     }
     
+    // Setup mutation observer to re-apply colors when DOM changes
+    function setupObserver() {
+        if (observer) {
+            observer.disconnect();
+        }
+        
+        observer = new MutationObserver(function(mutations) {
+            if (isSwapping) return; // Don't react to our own changes
+            
+            const isDark = document.body.classList.contains('dark-mode');
+            if (isDark) {
+                // Wait a bit to batch multiple mutations
+                setTimeout(() => {
+                    if (!isSwapping) {
+                        swapInlineColors(true);
+                    }
+                }, 50);
+            }
+        });
+        
+        // Observe the entire document for changes
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style']
+        });
+    }
+    
     // Wait for DOM to be ready
     function initDarkModeToggle() {
         const toggleButton = document.getElementById('dark-mode-toggle');
@@ -145,14 +182,21 @@
             return;
         }
         
+        // Remove any existing listeners
+        const newButton = toggleButton.cloneNode(true);
+        toggleButton.parentNode.replaceChild(newButton, toggleButton);
+        
         // Add click handler
-        toggleButton.addEventListener('click', function(e) {
+        newButton.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             toggleDarkMode();
         });
         
         console.log('[Dark Mode] Toggle button initialized');
+        
+        // Setup observer after button is ready
+        setupObserver();
     }
     
     // Toggle dark mode
@@ -160,8 +204,17 @@
         const wasDark = document.body.classList.contains('dark-mode');
         const isDark = !wasDark;
         
+        // Temporarily disconnect observer to prevent loops
+        if (observer) {
+            observer.disconnect();
+        }
+        
         // Toggle class
-        document.body.classList.toggle('dark-mode');
+        if (isDark) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
         
         // Swap inline colors
         if (isDark) {
@@ -174,6 +227,11 @@
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
         
         console.log('[Dark Mode] Toggled to:', isDark ? 'dark' : 'light');
+        
+        // Reconnect observer after a short delay
+        setTimeout(() => {
+            setupObserver();
+        }, 200);
     }
     
     // Initialize when DOM is ready
@@ -182,22 +240,6 @@
     } else {
         initDarkModeToggle();
     }
-    
-    // Re-apply colors when Dash re-renders
-    const observer = new MutationObserver(function(mutations) {
-        const isDark = document.body.classList.contains('dark-mode');
-        if (isDark) {
-            swapInlineColors(true);
-        }
-    });
-    
-    // Observe the entire document for changes
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['style']
-    });
     
     // Also try to initialize after Dash finishes rendering
     setTimeout(initDarkModeToggle, 1000);
