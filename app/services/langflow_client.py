@@ -103,7 +103,12 @@ def call_langflow_chain(flow_name: str, segment: dict) -> dict:
             max_tokens=300
         )
         
-        result_text = response.choices[0].message.content.strip()
+        # Extract and validate response content
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("Azure OpenAI returned empty response")
+        
+        result_text = content.strip()
         
         # Parse JSON response
         data = json.loads(result_text)
@@ -122,6 +127,10 @@ def call_langflow_chain(flow_name: str, segment: dict) -> dict:
         return data
 
     except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse JSON response: {e}\nResponse: {result_text}")
+        response_preview = result_text if 'result_text' in locals() else "No response captured"
+        raise ValueError(f"Failed to parse JSON response: {e}\nResponse: {response_preview}")
+    except ValueError:
+        # Re-raise validation errors
+        raise
     except Exception as e:
         raise Exception(f"Azure OpenAI request failed: {e}")
