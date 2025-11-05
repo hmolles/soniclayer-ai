@@ -3,6 +3,12 @@ import numpy as np
 from pathlib import Path
 
 try:
+    import soundfile as sf
+    USE_SOUNDFILE = True
+except ImportError:
+    USE_SOUNDFILE = False
+
+try:
     from scipy.io import wavfile
     USE_SCIPY = True
 except ImportError:
@@ -13,9 +19,10 @@ except ImportError:
 def extract_waveform(audio_path):
     """
     Extract time and amplitude data from audio file.
+    Supports both standard WAV and FLAC-compressed WAV formats.
     
     Args:
-        audio_path: Path to WAV file
+        audio_path: Path to audio file
         
     Returns:
         Tuple of (time_array, amplitude_array)
@@ -25,8 +32,36 @@ def extract_waveform(audio_path):
             print(f"Warning: Audio file not found: {audio_path}")
             return np.array([0, 1]), np.array([0, 0])  # Return minimal valid data
         
+        # Try soundfile first - handles FLAC, WAV, and other formats
+        if USE_SOUNDFILE:
+            try:
+                audio_data, sample_rate = sf.read(audio_path)
+                
+                # Handle stereo by taking first channel
+                if len(audio_data.shape) > 1:
+                    audio_data = audio_data[:, 0]
+                
+                # Normalize amplitude (soundfile returns float64 in [-1, 1] range)
+                amplitude = audio_data.astype(float)
+                
+                # Create time array
+                n_frames = len(amplitude)
+                duration = n_frames / sample_rate
+                time = np.linspace(0, duration, n_frames)
+                
+                # Downsample for faster rendering (max 10000 points)
+                if n_frames > 10000:
+                    step = n_frames // 10000
+                    time = time[::step]
+                    amplitude = amplitude[::step]
+                
+                return time, amplitude
+            except Exception as e:
+                print(f"Warning: soundfile failed for {audio_path}: {e}")
+                # Fall through to scipy/wave
+        
         if USE_SCIPY:
-            # Use scipy which handles more WAV formats including float32
+            # Use scipy which handles standard WAV formats
             sample_rate, audio_data = wavfile.read(audio_path)
             
             # Handle stereo by taking first channel

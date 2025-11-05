@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["ffmpeg-full", "libxcrypt", "pkg-config", "redis", "xsimd"]
+packages = ["ffmpeg-full", "libsndfile", "libxcrypt", "pkg-config", "redis", "xsimd"]
 
 [workflows]
 runButton = "Project"
