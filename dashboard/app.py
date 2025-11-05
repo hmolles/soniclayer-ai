@@ -157,14 +157,17 @@ def create_file_sidebar():
         file_list = html.Div(file_items, id="file-list-container")
     
     return html.Div([
-        html.H3("📁 Audio Files", style={
-            "margin": "0 0 16px 0",
-            "fontSize": "16px",
-            "color": "#111827"
-        }),
+        html.H3([
+            html.Span("📁 ", style={"marginRight": "8px"}),
+            html.Span("Audio Files", style={"fontWeight": "600", "fontSize": "16px"}),
+            html.Span(f" ({len(audio_files)})", style={
+                "fontWeight": "400",
+                "fontSize": "14px",
+                "color": "#6b7280",
+                "marginLeft": "4px"
+            }) if audio_files else ""
+        ], style={"margin": "0 0 16px 0"}),
         file_list,
-        html.Div(f"{len(audio_files)} file{'s' if len(audio_files) != 1 else ''} available" if audio_files else "", 
-                style={"marginTop": "10px", "padding": "10px", "color": "#6b7280", "fontSize": "12px"}),
         dcc.Store(id="selected-audio-store", data=default_audio_id)  # Hidden store for selected file
     ], style={
         "width": "280px",
