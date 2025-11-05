@@ -193,10 +193,20 @@ app.layout = html.Div([
         # Header
         html.Div([
             html.Div([
-                html.H1("🎵 SonicLayer AI - Audio Analysis Dashboard", style={
+                html.H1("🎵 SonicLayer AI", style={
                     "margin": "0",
-                    "color": "#111827",
-                    "fontSize": "28px"
+                    "fontSize": "28px",
+                    "fontWeight": "700",
+                    "background": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    "WebkitBackgroundClip": "text",
+                    "WebkitTextFillColor": "transparent",
+                    "display": "inline-block"
+                }),
+                html.P("Audio Analysis Dashboard", style={
+                    "margin": "4px 0 12px 0",
+                    "fontSize": "14px",
+                    "color": "#6b7280",
+                    "fontWeight": "500"
                 }),
                 html.P(id="dashboard-audio-id-display", children="Select an audio file from the sidebar", style={
                     "margin": "4px 0 0 0",
