@@ -84,6 +84,27 @@
         isSwapping = true;
         
         const mappings = isDark ? colorMappings : reverseMappings;
+        
+        // CRITICAL FIX: Explicitly set main container backgrounds
+        // These elements don't have inline styles by default
+        const mainContainers = [
+            document.body,
+            document.getElementById('react-entry-point')
+        ];
+        
+        mainContainers.forEach(container => {
+            if (container) {
+                if (isDark) {
+                    container.style.backgroundColor = '#0F1419'; // Dark background
+                    container.style.color = '#F7FAFC'; // Light text
+                } else {
+                    container.style.backgroundColor = '#F5F5F5'; // Light background
+                    container.style.color = '#212121'; // Dark text
+                }
+            }
+        });
+        
+        // Now swap all elements with existing inline styles
         const elements = document.querySelectorAll('[style]');
         
         elements.forEach(element => {
@@ -264,6 +285,11 @@
                 setTimeout(() => setupObserver(), 200);
             }
         }, 300);
+        
+        // CRITICAL FIX: Force browser to recalculate styles
+        // This ensures all CSS changes are applied immediately
+        document.body.offsetHeight; // Trigger reflow
+        window.dispatchEvent(new Event('resize')); // Trigger re-render
     }
     
     // Initialize when DOM is ready
