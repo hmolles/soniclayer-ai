@@ -147,7 +147,7 @@ app.clientside_callback(
     Output("segment-metadata", "children", allow_duplicate=True),
     Output("user-clicked", "data", allow_duplicate=True),
     Input("playback-sync", "n_intervals"),
-    Input("audio-player", "currentTime"),
+    Input('current-time-store', 'data'),
     State("user-clicked", "data"),
     prevent_initial_call=True
 )
