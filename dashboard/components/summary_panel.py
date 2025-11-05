@@ -331,7 +331,9 @@ def render_collapsible_summary(personas: list, summary_data: dict, is_expanded: 
                 "borderRadius": "0 0 8px 8px",
                 "border": "1px solid #e5e7eb",
                 "borderTop": "none",
-                "display": "block" if is_expanded else "none"
+                "display": "grid" if is_expanded else "none",
+                "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))",
+                "gap": "12px"
             }
         )
     ], style={
