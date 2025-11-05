@@ -158,6 +158,22 @@ app.layout = html.Div([
 )
 def display_page(pathname, search):
     """Route to the appropriate page based on pathname and query parameters"""
+    print(f"[ROUTING] pathname={pathname}, search={search}")
+    
+    # Handle URL-encoded query strings in pathname (screenshot tool quirk)
+    if '%3F' in pathname or '?' in pathname:
+        if '?' in pathname:
+            pathname, search = pathname.split('?', 1)
+            search = '?' + search
+        else:
+            # URL-encoded case
+            import urllib.parse
+            pathname = urllib.parse.unquote(pathname)
+            if '?' in pathname:
+                pathname, search = pathname.split('?', 1)
+                search = '?' + search
+    
+    print(f"[ROUTING FIXED] pathname={pathname}, search={search}")
     
     if pathname == '/admin':
         # Admin page

@@ -80,7 +80,7 @@ def render_file_browser():
             ], style={"marginBottom": "16px"}),
             
             # View Dashboard button
-            html.A(
+            dcc.Link(
                 "View Dashboard →",
                 href=f"/dashboard?audio_id={audio['audio_id']}",
                 style={
