@@ -523,12 +523,16 @@ app.clientside_callback(
 def auto_update_playback(current_time, segments, waveform_data, user_clicked, audio_id):
     import numpy as np
     
+    print(f"[AUTO_UPDATE] Called! time={current_time}, clicked={user_clicked}, has_segments={bool(segments)}, has_waveform={bool(waveform_data)}")
+    
     # If user just clicked, reset flag and don't update
     if user_clicked:
+        print("[AUTO_UPDATE] User clicked, skipping")
         return dash.no_update, dash.no_update, False
     
     # Skip if no valid time or segments
     if current_time is None or current_time < 0 or not segments or not waveform_data:
+        print(f"[AUTO_UPDATE] Skipping - invalid data")
         return dash.no_update, dash.no_update, False
     
     # Convert waveform data back to numpy arrays
