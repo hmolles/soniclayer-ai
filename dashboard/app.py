@@ -517,7 +517,38 @@ app.clientside_callback(
     prevent_initial_call=True
 )
 
-# Callback 1: Handle waveform clicks for seeking
+# Callback 1: Auto-update metadata during playback
+@app.callback(
+    Output("segment-metadata", "children", allow_duplicate=True),
+    Output("user-clicked", "data", allow_duplicate=True),
+    Input('current-time-store', 'data'),
+    State("segments-store", "data"),
+    State("user-clicked", "data"),
+    prevent_initial_call=True
+)
+def auto_update_metadata(current_time, segments, user_clicked):
+    # If user just clicked, reset flag and don't update
+    if user_clicked:
+        return dash.no_update, False
+    
+    # Skip if no valid time or segments
+    if current_time is None or current_time < 0 or not segments:
+        return dash.no_update, False
+    
+    # Find active segment
+    active_segment = next(
+        (seg for seg in segments if seg["start"] <= current_time <= seg["end"]),
+        None
+    )
+    
+    # Update metadata
+    if active_segment:
+        metadata = render_metadata_panel(active_segment)
+        return metadata, False
+    else:
+        return dash.no_update, False
+
+# Callback 2: Handle waveform clicks for seeking
 @app.callback(
     Output("segment-metadata", "children"),
     Output("user-clicked", "data"),
@@ -547,7 +578,7 @@ def handle_waveform_click(click_data, segments):
     # Set user-clicked flag
     return metadata, True
 
-# Callback 2: Initialize metadata panel on first load
+# Callback 3: Initialize metadata panel on first load
 @app.callback(
     Output("segment-metadata", "children", allow_duplicate=True),
     Input("segments-store", "data"),
