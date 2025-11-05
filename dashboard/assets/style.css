@@ -11,3 +11,55 @@ h4 {
 audio {
     margin-bottom: 20px;
 }
+/* ============================================================
+   UI/UX Improvements - Phase 4: Hover Effects & Polish
+   ============================================================ */
+
+/* Smooth transitions for interactive elements */
+.file-button {
+    transition: all 0.2s ease;
+}
+
+.file-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important;
+}
+
+/* Persona card hover effect */
+.persona-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.persona-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.12) !important;
+}
+
+/* Summary panel animation */
+#summary-collapse-content {
+    transition: all 0.3s ease;
+}
+
+/* Score badge hover */
+.score-badge {
+    transition: transform 0.15s ease;
+}
+
+.score-badge:hover {
+    transform: scale(1.1);
+}
+
+/* Admin button hover */
+#admin-toggle-btn:hover {
+    background-color: #f3f4f6 !important;
+}
+
+/* Tab hover effect */
+.dash-tab:hover {
+    background-color: #f9fafb !important;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
