@@ -27,6 +27,24 @@
         'rgb(15, 23, 42)': 'rgb(247, 250, 252)',
         'rgb(100, 116, 139)': 'rgb(160, 174, 192)',
         
+        // Additional light gray backgrounds (summary panel, cards)
+        '#f8fafc': '#1e293b',
+        '#cbd5e1': '#475569',
+        '#e2e8f0': '#334155',
+        '#f1f5f9': '#1e293b',
+        '#e5e7eb': '#334155',
+        
+        // Additional dark text colors (admin page, file browser)
+        '#374151': '#CBD5E0',
+        
+        // RGB versions of common colors
+        'rgb(248, 250, 252)': 'rgb(30, 41, 59)',
+        'rgb(203, 213, 225)': 'rgb(71, 85, 105)',
+        'rgb(226, 232, 240)': 'rgb(51, 65, 85)',
+        'rgb(107, 114, 128)': 'rgb(160, 174, 192)',
+        'rgb(55, 65, 81)': 'rgb(203, 213, 224)',
+        'rgb(17, 24, 39)': 'rgb(247, 250, 252)',
+        
         // Keep functional colors (success, error, etc.)
         '#3b82f6': '#42A5F5',  // Blue - slightly brighter
         '#10b981': '#10b981',  // Green - keep same
@@ -155,7 +173,9 @@
             if (isSwapping) return; // Don't react while we're swapping
             
             const isDark = document.body.classList.contains('dark-mode');
-            if (!isDark) return; // Only auto-apply in dark mode
+            
+            // CRITICAL FIX: Don't exit early - we need to swap colors in BOTH modes
+            // When toggling to light mode, new Dash components need their colors swapped back
             
             // Only react to new child nodes being added, not style changes
             let hasNewNodes = false;
@@ -169,8 +189,9 @@
             if (hasNewNodes) {
                 // Debounce to batch multiple mutations
                 setTimeout(() => {
-                    if (!isSwapping && document.body.classList.contains('dark-mode')) {
-                        swapInlineColors(true);
+                    if (!isSwapping) {
+                        // Apply color swapping based on current mode
+                        swapInlineColors(isDark);
                     }
                 }, 100);
             }
