@@ -1,0 +1,74 @@
+# SonicLayer AI - Quick Command Reference
+
+## Current System Status (Nov 5, 2025)
+✅ Backend running: http://localhost:8000
+✅ RQ Worker running: transcript_tasks queue
+✅ Redis + Langflow running: docker-compose
+✅ MVP COMPLETE - Testing new Whisper timestamp segmentation
+
+---
+
+## 1. Start the Backend (if not running)
+source venv/bin/activate
+uvicorn app.main:app --reload &
+
+## 2. Start RQ Worker (REQUIRED for persona processing)
+source venv/bin/activate
+rq worker transcript_tasks --url redis://localhost:6379/0 &
+# OR for macOS: ./scripts/start_worker.sh
+
+## 3. Upload a WAV File
+curl -X POST http://localhost:8000/evaluate/ \
+  -F "file=@test1.wav;type=audio/wav" | jq
+
+# Response includes:
+# - audio_id (SHA256 hash of file)
+# - transcript_length (total characters)
+# - segment_count (number of ~15s segments)
+# - job_ids (GenZ and Advertiser worker jobs)
+
+## 4. Check Processing Status
+# Wait 1-2 minutes for workers to complete
+curl http://localhost:8000/segments/<audio_id> | jq | head -50
+
+## 5. Start Dashboard
+python dashboard/app.py <audio_id>
+# Then open: http://localhost:8050
+
+---
+
+## Utilities
+
+### Get audio_id for existing file
+python -c "import hashlib; data=open('test1.wav','rb').read(); print(hashlib.sha256(data).hexdigest())"
+
+### Clear Redis data for specific audio
+audio_id="<paste_hash_here>"
+docker exec soniclayer-redis redis-cli KEYS "*${audio_id}*" | \
+  xargs -I {} docker exec soniclayer-redis redis-cli DEL {}
+
+### Check worker logs
+tail -f logs/rq_worker_transcript.log
+
+### Check Docker services
+docker-compose ps
+docker-compose logs redis
+docker-compose logs langflow
+
+### Run integration test
+python scripts/integration_test.py test1.wav
+
+---
+
+## Recent Changes (Nov 5)
+- ✅ Implemented Whisper timestamp-based segmentation (replaces word-count estimation)
+- ✅ Added instrumental section detection (shows 🎵 for segments <20 chars)
+- ✅ Fixed transcript-audio alignment issues
+- ✅ Added dash-player to requirements.txt
+- ✅ Archived old working documents
+- ✅ Updated PROJECT_STATUS.md with MVP completion status
+
+## Testing Now
+- Verifying test1.wav upload with new accurate timing
+- Confirming instrumental notes appear in dashboard
+- Validating perfect audio-transcript sync

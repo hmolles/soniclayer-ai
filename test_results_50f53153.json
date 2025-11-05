@@ -1,0 +1,107 @@
+{
+  "audio_id": "50f5315356317fa1a803bc5a754e4899d3275b711590f5baa7db35947f04bf70",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 14.8,
+      "transcript": "That's what last week's an alletter by the AFL concerned about his social media activity. Most controversies from good people pop up when an attempt at humor falls flat. And I think that's what these sort of",
+      "topic": "Technology",
+      "tone": "Controversial",
+      "genz": {
+        "score": 3,
+        "opinion": "meh but i\u2019ll listen if it\u2019s 100% tech \ud83d\ude05",
+        "rationale": "The segment\u2019s vibe is kinda relatable but the phrasing feels off and repetitive. Could\u2019ve been better with more pop culture hooks.",
+        "confidence": 0.75,
+        "note": "Not worth the hype unless it\u2019s a meme-worthy rant"
+      }
+    },
+    {
+      "start": 14.8,
+      "end": 29.6,
+      "transcript": "things are. An investigation into the 2019 Christchurch terror attack that asked the unsettling question, did the Australian terrorist truly act alone? Listen to secrets we keep, low-nactor on listener now. Triple M. Weather. Today on the",
+      "topic": "Health",
+      "tone": "Controversial"
+    },
+    {
+      "start": 29.6,
+      "end": 44.4,
+      "transcript": "border, cloud increasing with the top of 21, tonight, down to 5 and tomorrow, mostly fine with a high of 21. Need a new playlist? Listener has your music sorted. Search music now on listener. The feel",
+      "topic": "Technology",
+      "tone": "Informative"
+    },
+    {
+      "start": 44.4,
+      "end": 59.2,
+      "transcript": "good start to your day. This is Lou and Al. It's Triple M breakfast. It is go time for your Thursday morning here at the borders triple M with ALS-like solo. Lou feeling a little bit under",
+      "topic": "Food",
+      "tone": "Informative"
+    },
+    {
+      "start": 59.2,
+      "end": 74.0,
+      "transcript": "the weather and commiserations to anyone else in the same boat. Hopefully feeling a bit better either tomorrow or early next week. In the meantime at 26-8 we're doing the show thanks to Total Tools Aubrey and",
+      "topic": "Technology",
+      "tone": "Informative"
+    },
+    {
+      "start": 74.0,
+      "end": 88.8,
+      "transcript": "we're don't go. Workwear legends, bad Mac, Blunder and more. Still to come, your chance at a thousand bucks. Just finalising today's questions for the free money minute. There's ten of them in total, 60 seconds between",
+      "topic": "Entertainment",
+      "tone": "Informative"
+    },
+    {
+      "start": 88.8,
+      "end": 103.6,
+      "transcript": "you and a possible $1,000. We'll play that just after the 80-clock news. Plus we're going to catch up with our movie guru Shane A. He's delighted this morning we'll get his thoughts on the new releases",
+      "topic": "Entertainment",
+      "tone": "Excited",
+      "note": "Repeated theme"
+    },
+    {
+      "start": 103.6,
+      "end": 118.4,
+      "transcript": "of Reaching Cinemas. Including what he thinks of the new buyer picked the new Bruce Springsteen movie. I've got to say it does look good from all the previews I've been seeing. That's all it's why. He's",
+      "topic": "Entertainment",
+      "tone": "Informative",
+      "note": "Repeated theme"
+    },
+    {
+      "start": 118.4,
+      "end": 133.2,
+      "transcript": "moving for it in sounds. Little lion man, Triple M. The star. Rates yourself and rakes yourself. Take all the courage you have left. And wasted on fixing all the problems that you made in your own",
+      "topic": "Entertainment",
+      "tone": "Informative",
+      "note": "Repeated theme"
+    },
+    {
+      "start": 133.2,
+      "end": 148.0,
+      "transcript": "head. But it was not your fault with mine and it was your heart on the line. I already put it on this time. Deny my dear. Deny my dear. Trumble for yourself, my man. You know",
+      "topic": "Health",
+      "tone": "Controversial"
+    },
+    {
+      "start": 148.0,
+      "end": 162.8,
+      "transcript": "that you have seen this all before. Remember little lion man, you'll never settle any of your scores. Your grace is wasted in your face. Your folder stands alone among the wreck. Now learn from your mother.",
+      "topic": "Entertainment",
+      "tone": "Controversial"
+    },
+    {
+      "start": 162.8,
+      "end": 177.6,
+      "transcript": "I'll spend your days biting your own neck. But it was not your fault with mine and it was your heart on the line. I already put it on this time. Deny my dear. But it was",
+      "topic": "Health",
+      "tone": "Controversial"
+    },
+    {
+      "start": 177.6,
+      "end": 192.4,
+      "transcript": "not your fault with mine and it was your heart on the line. I already put it on this time. Deny my dear. Deny my dear. Deny my dear. Deny my dear.",
+      "topic": "Health",
+      "tone": "Controversial",
+      "note": "Repeated theme"
+    }
+  ]
+}

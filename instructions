@@ -1,0 +1,143 @@
+🧠 GitHub Copilot Agent Instructions for SonicLayer AI
+📌 Project Overview
+SonicLayer AI is an intelligent audio insight system designed for producers and content teams. It transcribes audio, classifies segments by topic and tone, and simulates audience reactions using synthetic persona agents. The system supports both pre-recorded and live audio, with a dashboard UI for visualising waveform data and segment feedback.
+
+✅ What Has Been Implemented
+1. Backend (FastAPI)
+
+/evaluate/: Accepts WAV files, transcribes using Whisper, segments transcript, classifies segments, dispatches to persona agents.
+/segments/{audio_id}: Returns enriched segment data (transcript + classifier + persona feedback).
+/audio/{audio_id}: Serves audio file for dashboard playback.
+Redis is used for:
+
+Caching transcripts
+Storing classifier output
+Storing persona feedback
+Task queue via RQ
+
+
+
+2. Transcription
+
+Local Whisper model used for WAV transcription.
+Transcript is segmented into ~15s chunks.
+
+3. Classification
+
+HuggingFace zero-shot classification for topic and tone.
+Results cached in Redis.
+
+4. Persona Agents
+
+Five agents: Gen Z, Parents, Regional, Advertiser, Academic.
+Each agent evaluates segments based on demographic preferences.
+Feedback includes score (1–5), opinion, rationale, optional flags.
+
+5. Dashboard (Dash)
+
+Waveform visualisation with overlays.
+Audio playback with cursor sync.
+Segment metadata panel updates in real time.
+Click-to-seek functionality implemented.
+
+6. Testing
+
+Unit and integration tests for:
+
+Transcription
+Classification
+Segment enrichment
+Endpoint behaviour
+Dashboard components
+
+
+
+7. PersonaAgent Base Class
+
+Centralised scoring logic
+Rationale generation
+Langflow-compatible prompt formatting
+Confidence estimation
+
+
+🔧 What Still Needs to Be Done
+1. Agent Subclasses
+
+Create subclasses for each persona (e.g. GenZAgent, ParentsAgent) inheriting from PersonaAgent.
+Define preferences and override logic if needed.
+
+2. Langflow Integration
+
+Create Langflow chains for each agent:
+
+Input: segment metadata
+PromptTemplate: persona-specific prompt
+LLMChain: local or API-based LLM
+Output: structured feedback
+
+Define YAML/JSON config for each chain.
+
+
+Define YAML/JSON config for each chain.
+
+3. Coordinator Agent
+
+Aggregate persona feedback.
+Apply weights per persona.
+Resolve conflicts and generate consensus score.
+Return top 3 opinions and alerts.
+
+4. Live Audio Ingest (Optional)
+
+WebSocket or streaming endpoint.
+Real-time transcription and dashboard updates.
+
+5. Packaging
+
+Finalise requirements.txt
+Add README.md with setup and usage instructions
+Optional: Dockerfile, Makefile, .env
+
+6. Deployment Readiness
+
+Ensure Redis is running and accessible.
+Start RQ workers for each agent.
+Validate dashboard with real audio files.
+Run full test suite with pytest.
+
+
+🧪 Test Driven Development Notes
+
+All new components (agent subclasses, coordinator, Langflow chains) must include unit tests.
+Use mock data for LLM responses and Redis interactions.
+Validate scoring consistency and rationale formatting.
+Use pytest, unittest.mock, and optionally httpx_mock or fakeredis.
+
+
+📁 File Organisation Guidelines
+soniclayer_ai/
+├── app/
+│   ├── main.py
+│   ├── routes/
+│   ├── models/
+│   │   └── personas/
+│   │       ├── persona_agent.py
+│   │       ├── genz_agent.py
+│   │       └── ...
+├── services/
+├── workers/
+├── utils/
+├── dashboard/
+├── tests/
+├── uploads/
+├── requirements.txt
+├── README.md
+
+
+🧠 Copilot Agent Behaviour
+
+Use Python 3.10+ and follow PEP8.
+Prefer modular, testable code.
+Avoid hardcoding; use config files or constants where possible.
+Use descriptive docstrings and type hints.
+When generating Langflow prompts, ensure variables are clearly defined and match the agent’s preferences.

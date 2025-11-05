@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+redis
+rq
+whisper
+transformers
+torch
+dash
+dash-player
+plotly
+dash-extensions
+scipy
+librosa
+numpy
+requests
+python-dotenv
+pytest
