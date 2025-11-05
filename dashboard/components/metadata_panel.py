@@ -147,9 +147,11 @@ def render_metadata_panel(segment):
         Dash HTML component or None
     """
     # Import personas from dashboard config
+    import os
     import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).parent.parent))
+    dashboard_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if dashboard_dir not in sys.path:
+        sys.path.insert(0, dashboard_dir)
     from personas_config import get_all_personas
     
     if segment is None:
