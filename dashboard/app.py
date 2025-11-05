@@ -65,9 +65,7 @@ def get_score_color(score):
 
 def create_file_sidebar():
     """Create the left sidebar with clickable file browser."""
-    import requests
-    
-    audio_files = get_all_audio_files()
+    audio_files = get_all_audio_files()  # Already includes summary data
     personas = get_all_personas()
     
     if not audio_files:
@@ -87,37 +85,30 @@ def create_file_sidebar():
             short_id = audio["audio_id"][:12] + "..."
             is_selected = audio["audio_id"] == default_audio_id
             
-            # Fetch summary data for this audio file
+            # Build badges from pre-fetched summary (no HTTP calls!)
             summary_badges = []
-            try:
-                response = requests.get(f"http://localhost:8000/summary/{audio['audio_id']}", timeout=2)
-                if response.status_code == 200:
-                    summary_data = response.json()
-                    
-                    # Create compact badges for each persona
-                    for persona in personas:
-                        persona_id = persona["id"]
-                        if persona_id in summary_data.get("personas", {}):
-                            persona_stats = summary_data["personas"][persona_id]
-                            avg_score = persona_stats.get("avg_score", 0)
-                            
-                            badge = html.Span([
-                                html.Span(persona["emoji"], style={"marginRight": "2px"}),
-                                html.Span(f"{avg_score:.1f}", style={"fontWeight": "600"})
-                            ], style={
-                                "display": "inline-block",
-                                "padding": "2px 6px",
-                                "marginRight": "4px",
-                                "fontSize": "10px",
-                                "borderRadius": "4px",
-                                "backgroundColor": get_score_color(avg_score) + "20",
-                                "color": get_score_color(avg_score),
-                                "border": f"1px solid {get_score_color(avg_score)}40"
-                            })
-                            summary_badges.append(badge)
-            except Exception as e:
-                # Silently fail if summary not available
-                pass
+            if audio.get("summary"):
+                for persona in personas:
+                    persona_id = persona["id"]
+                    if persona_id in audio["summary"]:
+                        mini_stats = audio["summary"][persona_id]
+                        emoji = mini_stats["emoji"]
+                        avg_score = mini_stats["avg_score"]
+                        
+                        badge = html.Span([
+                            html.Span(emoji, style={"marginRight": "2px"}),
+                            html.Span(f"{avg_score:.1f}", style={"fontWeight": "600"})
+                        ], style={
+                            "display": "inline-block",
+                            "padding": "2px 6px",
+                            "marginRight": "4px",
+                            "fontSize": "10px",
+                            "borderRadius": "4px",
+                            "backgroundColor": get_score_color(avg_score) + "20",
+                            "color": get_score_color(avg_score),
+                            "border": f"1px solid {get_score_color(avg_score)}40"
+                        })
+                        summary_badges.append(badge)
             
             item = html.Button([
                 html.Span("🎵", style={"fontSize": "20px", "marginRight": "8px"}),

@@ -5,6 +5,48 @@ from datetime import datetime
 import requests
 
 
+def get_audio_summary_mini(audio_id: str) -> dict:
+    """
+    Fetch mini summary (just persona scores) from backend.
+    
+    Args:
+        audio_id: Audio file identifier
+    
+    Returns:
+        Dict mapping persona_id to mini stats:
+        {
+            "genz": {"avg_score": 2.8, "emoji": "🔥"},
+            "advertiser": {"avg_score": 4.2, "emoji": "💼"}
+        }
+    """
+    from dashboard.personas_config import get_all_personas
+    
+    try:
+        response = requests.get(f"http://localhost:8000/summary/{audio_id}", timeout=2)
+        if response.status_code == 200:
+            summary_data = response.json()
+            
+            # Build mini summary
+            mini_summary = {}
+            personas = get_all_personas()
+            
+            for persona in personas:
+                persona_id = persona["id"]
+                if persona_id in summary_data.get("personas", {}):
+                    stats = summary_data["personas"][persona_id]
+                    mini_summary[persona_id] = {
+                        "avg_score": stats.get("avg_score", 0),
+                        "emoji": persona["emoji"]
+                    }
+            
+            return mini_summary
+    except Exception as e:
+        # Log but don't break - fallback to empty summary
+        print(f"Warning: Could not fetch summary for {audio_id}: {e}")
+    
+    return {}
+
+
 def get_all_audio_files():
     """
     Scan uploads folder and return list of audio files with metadata.
@@ -17,7 +59,8 @@ def get_all_audio_files():
                 "filename": "50f53153....wav",
                 "file_size_mb": 12.5,
                 "upload_date": "2025-11-05 10:30",
-                "num_segments": 18
+                "num_segments": 18,
+                "summary": {"genz": {"avg_score": 2.8, "emoji": "🔥"}, ...}
             }
         ]
     """
@@ -41,12 +84,16 @@ def get_all_audio_files():
             # Try to get number of segments from backend
             num_segments = get_segment_count(audio_id)
             
+            # Fetch summary data (ONCE per scan)
+            summary = get_audio_summary_mini(audio_id)
+            
             audio_files.append({
                 "audio_id": audio_id,
                 "filename": file_path.name,
                 "file_size_mb": file_size_mb,
                 "upload_date": upload_date,
-                "num_segments": num_segments
+                "num_segments": num_segments,
+                "summary": summary
             })
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
