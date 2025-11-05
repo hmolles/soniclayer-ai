@@ -90,32 +90,81 @@ def render_persona_summary_card(persona: dict, stats: dict, compact: bool = Fals
     worst_segments = stats.get("worst_segments", [])
     
     if compact:
-        # Compact version for collapsible panel
+        # Compact version for collapsible panel - card-style with larger score
         return html.Div([
-            # Header row
-            html.Div([
-                html.Span(persona["emoji"], style={"fontSize": "20px", "marginRight": "8px"}),
-                html.Span(persona["display_name"], style={
-                    "fontSize": "14px",
+            # Emoji at top
+            html.Div(
+                persona["emoji"],
+                style={
+                    "fontSize": "32px",
+                    "textAlign": "center",
+                    "marginBottom": "8px"
+                }
+            ),
+            
+            # Persona name
+            html.Div(
+                persona["display_name"],
+                style={
+                    "fontSize": "13px",
                     "fontWeight": "600",
                     "color": "#111827",
-                    "flex": "1"
-                }),
-                html.Span(f"{avg_score:.1f}/5.0", style={
-                    "fontSize": "16px",
+                    "textAlign": "center",
+                    "marginBottom": "12px"
+                }
+            ),
+            
+            # Large score display
+            html.Div([
+                html.Span(f"{avg_score:.1f}", style={
+                    "fontSize": "36px",
                     "fontWeight": "700",
-                    "color": get_score_color(avg_score)
+                    "color": get_score_color(avg_score),
+                    "lineHeight": "1"
+                }),
+                html.Span("/5.0", style={
+                    "fontSize": "14px",
+                    "color": "#9ca3af",
+                    "marginLeft": "4px"
                 })
             ], style={
-                "display": "flex",
-                "alignItems": "center"
-            })
+                "textAlign": "center",
+                "marginBottom": "12px"
+            }),
+            
+            # Confidence bar
+            html.Div([
+                html.Div(style={
+                    "width": "100%",
+                    "height": "4px",
+                    "backgroundColor": "#e5e7eb",
+                    "borderRadius": "2px",
+                    "overflow": "hidden"
+                }, children=[
+                    html.Div(style={
+                        "width": f"{avg_confidence * 100}%",
+                        "height": "100%",
+                        "backgroundColor": get_score_color(avg_score),
+                        "borderRadius": "2px",
+                        "transition": "width 0.5s ease"
+                    })
+                ]),
+                html.Div(f"{avg_confidence*100:.0f}% confidence", style={
+                    "fontSize": "10px",
+                    "color": "#6b7280",
+                    "marginTop": "6px",
+                    "textAlign": "center"
+                })
+            ])
+            
         ], style={
-            "padding": "12px 16px",
-            "backgroundColor": "#f9fafb",
-            "borderRadius": "6px",
-            "marginBottom": "8px",
-            "border": f"1px solid {get_score_color(avg_score)}40"
+            "padding": "16px",
+            "backgroundColor": "#ffffff",
+            "borderRadius": "8px",
+            "border": f"2px solid {get_score_color(avg_score)}",
+            "boxShadow": "0 2px 4px rgba(0,0,0,0.06)",
+            "transition": "transform 0.2s ease, box-shadow 0.2s ease",
+            "textAlign": "center"
         })
     else:
         # Full version for detailed summary tab
