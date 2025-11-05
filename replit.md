@@ -22,7 +22,13 @@ The full application requires large ML dependencies (PyTorch, Whisper, Transform
 ### Frontend (Dash Dashboard)
 - **Location:** `dashboard/app.py`
 - **Port:** 5000 (configured for Replit webview)
-- **Features:** Waveform visualization, audio playback, persona scores
+- **Architecture:** Single-page application with sidebar file browser
+- **Features:** 
+  - Real-time waveform cursor tracking during playback
+  - Auto-updating metadata panel showing current segment
+  - File browser sidebar for selecting audio files
+  - Admin modal for creating new personas
+  - Clickable waveform for jumping to specific timestamps
 
 ### Services
 - **Redis:** Caching and job queue (port 6379)
@@ -56,9 +62,12 @@ To run the full application on your local machine:
 See `README.md` and `QUICK_START.md` for detailed instructions.
 
 ## Recent Changes
+- **Sidebar File Browser** - Replaced multi-page routing with single-page design + sidebar (Nov 2025)
+  - File browser in left sidebar for easy audio selection
+  - Restored auto-updating cursor/metadata during playback (core feature)
+  - Admin panel as modal overlay instead of separate page
 - **Dynamic Persona Registry System** - Refactored to support unlimited personas via central config
 - **Admin Interface** - Web-based UI for adding personas without editing code
-- **Multi-page Routing** - Dashboard and Admin pages with navigation menu
 - **JSON Validation** - Real-time validation for persona prompts
 - Configured for Replit environment with Azure OpenAI integration
 - Set up Redis via Nix for caching and job queues
