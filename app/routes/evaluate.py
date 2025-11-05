@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import shutil
+import importlib
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
@@ -13,8 +14,7 @@ from app.services.classifier import classify_segment
 from app.services.cache import redis_conn
 from app.utils.hashing import generate_audio_hash
 from app.utils.segmentation import segment_transcript
-from app.workers.genz_worker import process_transcript as genz_process
-from app.workers.advertiser_worker import process_transcript as advertiser_process
+from app.config.personas import get_all_personas
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -148,38 +148,32 @@ async def evaluate_audio(file: UploadFile):
         
         logger.info(f"Stored transcript and classification in Redis for {audio_id}")
         
-        # Step 4: Queue persona evaluation workers (GenZ and Advertiser for MVP)
+        # Step 4: Dynamically queue all persona evaluation workers
         job_ids = {}
+        personas = get_all_personas()
         
-        try:
-            # Queue GenZ worker
-            genz_job = queue.enqueue(
-                genz_process,
-                audio_id,
-                transcript_segments,
-                classifier_results,
-                job_timeout="10m"
-            )
-            job_ids["genz"] = genz_job.id
-            logger.info(f"Queued GenZ worker: {genz_job.id}")
-        except Exception as e:
-            logger.error(f"Failed to queue GenZ worker: {e}")
-            job_ids["genz"] = f"error: {str(e)}"
-        
-        try:
-            # Queue Advertiser worker
-            advertiser_job = queue.enqueue(
-                advertiser_process,
-                audio_id,
-                transcript_segments,
-                classifier_results,
-                job_timeout="10m"
-            )
-            job_ids["advertiser"] = advertiser_job.id
-            logger.info(f"Queued Advertiser worker: {advertiser_job.id}")
-        except Exception as e:
-            logger.error(f"Failed to queue Advertiser worker: {e}")
-            job_ids["advertiser"] = f"error: {str(e)}"
+        for persona in personas:
+            persona_id = persona["id"]
+            worker_module = persona["worker_module"]
+            
+            try:
+                # Dynamically import the worker module
+                module = importlib.import_module(worker_module)
+                process_function = getattr(module, "process_transcript")
+                
+                # Queue the worker
+                job = queue.enqueue(
+                    process_function,
+                    audio_id,
+                    transcript_segments,
+                    classifier_results,
+                    job_timeout="10m"
+                )
+                job_ids[persona_id] = job.id
+                logger.info(f"Queued {persona['display_name']} worker: {job.id}")
+            except Exception as e:
+                logger.error(f"Failed to queue {persona['display_name']} worker: {e}")
+                job_ids[persona_id] = f"error: {str(e)}"
         
         # Step 5: Return response with audio_id and job tracking info
         total_transcript_length = sum(len(seg["text"]) for seg in transcript_segments)
