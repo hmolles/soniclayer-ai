@@ -6,20 +6,20 @@ def render_navigation(current_page="/"):
     Render navigation menu in top-right corner.
     
     Args:
-        current_page: Current page path (/, /admin)
+        current_page: Current page path (/files, /dashboard, /admin)
     """
     return html.Div([
         html.Div([
             dcc.Link(
-                "📊 Dashboard",
-                href="/",
+                "📁 Files",
+                href="/files",
                 style={
                     "padding": "8px 16px",
                     "marginRight": "8px",
                     "borderRadius": "6px",
                     "textDecoration": "none",
-                    "color": "#ffffff" if current_page == "/" else "#374151",
-                    "backgroundColor": "#3b82f6" if current_page == "/" else "transparent",
+                    "color": "#ffffff" if current_page == "/files" else "#374151",
+                    "backgroundColor": "#3b82f6" if current_page == "/files" else "transparent",
                     "fontWeight": "500",
                     "fontSize": "14px",
                     "transition": "all 0.2s"

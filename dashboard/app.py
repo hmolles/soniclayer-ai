@@ -7,33 +7,17 @@ from components.audio_player import render_audio_player
 from components.metadata_panel import render_metadata_panel
 from components.navigation import render_navigation
 from components.admin_page import render_admin_page
+from components.file_browser import render_file_browser
 from services.audio_utils import extract_waveform
 from services.api_client import fetch_segments
 
-# Get audio_id from command line or use default
-audio_id = sys.argv[1] if len(sys.argv) > 1 else "ebeb643592f3ae3097bba2e0334414df2d8652f8f73f6ab74d1a61c79b544275"
-audio_path = f"uploads/{audio_id}.wav"
+# Get default audio_id from command line (for backwards compatibility)
+default_audio_id = sys.argv[1] if len(sys.argv) > 1 else "50f5315356317fa1a803bc5a754e4899d3275b711590f5baa7db35947f04bf70"
 
-# Check if file exists
-if not Path(audio_path).exists():
-    print(f"Error: Audio file not found: {audio_path}")
-    print(f"Usage: python dashboard/app.py <audio_id>")
-    sys.exit(1)
+print(f"Dashboard server starting...")
+print(f"Default audio for command-line mode: {default_audio_id}")
 
-print(f"Loading dashboard for audio: {audio_id}")
-time, amplitude = extract_waveform(audio_path)
-segments = fetch_segments(audio_id)
-print(f"Loaded {len(segments)} segments")
-
-# Debug: Print first 3 segments to understand structure
-if segments:
-    print("\n=== First 3 Segments ===")
-    for i, seg in enumerate(segments[:3]):
-        print(f"Segment {i}: {seg['start']:.2f}s - {seg['end']:.2f}s")
-        print(f"  Transcript: {seg.get('transcript', 'NO TRANSCRIPT')[:80]}")
-        print(f"  Topic: {seg.get('topic', 'N/A')}, Tone: {seg.get('tone', 'N/A')}")
-    print("========================\n")
-
+# Initialize Dash app
 app = Dash(__name__, assets_folder='assets', suppress_callback_exceptions=True)
 
 # Add audio proxy endpoint to serve audio through port 5000
@@ -58,8 +42,38 @@ def proxy_audio(audio_id):
     except Exception as e:
         return Response(f"Error fetching audio: {str(e)}", status=500)
 
-def render_dashboard_page():
-    """Render the main dashboard page"""
+
+def render_dashboard_page(audio_id):
+    """Render the main dashboard page for a specific audio file"""
+    audio_path = f"uploads/{audio_id}.wav"
+    
+    # Check if file exists
+    if not Path(audio_path).exists():
+        return html.Div([
+            html.H1("⚠️ Audio File Not Found"),
+            html.P(f"Audio ID: {audio_id}"),
+            html.P("This audio file does not exist in the uploads folder."),
+            html.A("← Back to Files", href="/files", style={
+                "color": "#3b82f6",
+                "textDecoration": "none"
+            })
+        ], style={"padding": "40px"})
+    
+    print(f"Loading dashboard for audio: {audio_id}")
+    time, amplitude = extract_waveform(audio_path)
+    segments = fetch_segments(audio_id)
+    print(f"Loaded {len(segments)} segments")
+    
+    # Debug: Print first 3 segments to understand structure
+    if segments:
+        print("\n=== First 3 Segments ===")
+        for i, seg in enumerate(segments[:3]):
+            print(f"Segment {i}: {seg['start']:.2f}s - {seg['end']:.2f}s")
+            print(f"  Transcript: {seg.get('transcript', 'NO TRANSCRIPT')[:80]}")
+            print(f"  Topic: {seg.get('topic', 'N/A')}, Tone: {seg.get('tone', 'N/A')}")
+        print("========================\n")
+    
+    # Return dashboard layout
     return html.Div([
         # Header with navigation
         html.Div([
@@ -75,7 +89,7 @@ def render_dashboard_page():
                     "fontSize": "14px"
                 })
             ]),
-            render_navigation("/")
+            render_navigation("/dashboard")
         ], style={
             "padding": "20px",
             "backgroundColor": "#ffffff",
@@ -123,6 +137,7 @@ def render_dashboard_page():
         dcc.Interval(id="playback-sync", interval=1000, n_intervals=0),
         dcc.Store(id="user-clicked", data=False),
         dcc.Store(id='current-time-store', data=0),
+        dcc.Store(id='current-audio-id', data=audio_id),
     ])
 
 # Main app layout with routing
@@ -138,12 +153,15 @@ app.layout = html.Div([
 # Routing callback
 @app.callback(
     Output('page-content', 'children'),
-    Input('url', 'pathname')
+    Input('url', 'pathname'),
+    Input('url', 'search')
 )
-def display_page(pathname):
+def display_page(pathname, search):
+    """Route to the appropriate page based on pathname and query parameters"""
+    
     if pathname == '/admin':
+        # Admin page
         return html.Div([
-            # Header with navigation
             html.Div([
                 html.H1("🎵 SonicLayer AI", style={
                     "margin": "0",
@@ -160,8 +178,58 @@ def display_page(pathname):
             }),
             render_admin_page()
         ])
-    else:  # Default to dashboard
-        return render_dashboard_page()
+    
+    elif pathname == '/files' or pathname == '/':
+        # File browser page
+        return html.Div([
+            html.Div([
+                html.H1("🎵 SonicLayer AI", style={
+                    "margin": "0",
+                    "color": "#111827",
+                    "fontSize": "28px"
+                }),
+                render_navigation("/files")
+            ], style={
+                "padding": "20px",
+                "backgroundColor": "#ffffff",
+                "borderBottom": "2px solid #e5e7eb",
+                "marginBottom": "20px",
+                "position": "relative"
+            }),
+            render_file_browser()
+        ])
+    
+    elif pathname == '/dashboard':
+        # Dashboard page - get audio_id from query string
+        from urllib.parse import parse_qs
+        
+        audio_id = default_audio_id  # Default
+        if search:
+            params = parse_qs(search.lstrip('?'))
+            if 'audio_id' in params:
+                audio_id = params['audio_id'][0]
+        
+        return render_dashboard_page(audio_id)
+    
+    else:
+        # Default to file browser
+        return html.Div([
+            html.Div([
+                html.H1("🎵 SonicLayer AI", style={
+                    "margin": "0",
+                    "color": "#111827",
+                    "fontSize": "28px"
+                }),
+                render_navigation("/files")
+            ], style={
+                "padding": "20px",
+                "backgroundColor": "#ffffff",
+                "borderBottom": "2px solid #e5e7eb",
+                "marginBottom": "20px",
+                "position": "relative"
+            }),
+            render_file_browser()
+        ])
 
 # Persona creation callback
 @app.callback(
