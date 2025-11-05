@@ -185,6 +185,7 @@ app.layout = html.Div([
         dcc.Store(id='current-audio-id', data=default_audio_id),
         dcc.Store(id='segments-store', data=[]),
         dcc.Store(id='waveform-data-store', data={'time': [], 'amplitude': []}),
+        dcc.Store(id='waveform-click-dummy', data=None),  # Dummy store for clientside callback
     ], style={
         "marginLeft": "300px",  # Offset for fixed sidebar
         "minHeight": "100vh"
@@ -544,12 +545,12 @@ app.clientside_callback(
 )
 
 
-# Clientside callback to seek audio when waveform is clicked (no output needed)
+# Clientside callback to seek audio when waveform is clicked
 app.clientside_callback(
     """
     function(click_data) {
         if (!click_data) {
-            return;
+            return window.dash_clientside.no_update;
         }
         
         // Get clicked time from waveform
@@ -560,9 +561,11 @@ app.clientside_callback(
         if (audioElement) {
             audioElement.currentTime = clicked_time;
         }
+        
+        return window.dash_clientside.no_update;
     }
     """,
-    Output('url', 'pathname', allow_duplicate=True),  # Dummy output that we don't use
+    Output('waveform-click-dummy', 'data', allow_duplicate=True),
     Input('waveform-graph', 'clickData'),
     prevent_initial_call=True
 )
