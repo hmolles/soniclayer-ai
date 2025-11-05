@@ -349,7 +349,14 @@ def render_persona_cards(editing_id):
                     dcc.Input(
                         id={'type': 'edit-name', 'id': persona_id},
                         value=persona['display_name'],
-                        style={"width": "100%", "padding": "8px", "marginBottom": "12px", "border": "1px solid #d1d5db", "borderRadius": "4px"}
+                        style={
+                            "width": "100%",
+                            "padding": "8px",
+                            "marginBottom": "12px",
+                            "border": "1px solid #d1d5db",
+                            "borderRadius": "4px",
+                            "boxSizing": "border-box"
+                        }
                     ),
                     
                     # Emoji
@@ -358,7 +365,14 @@ def render_persona_cards(editing_id):
                         id={'type': 'edit-emoji', 'id': persona_id},
                         value=persona['emoji'],
                         maxLength=2,
-                        style={"width": "100%", "padding": "8px", "marginBottom": "12px", "border": "1px solid #d1d5db", "borderRadius": "4px"}
+                        style={
+                            "width": "100%",
+                            "padding": "8px",
+                            "marginBottom": "12px",
+                            "border": "1px solid #d1d5db",
+                            "borderRadius": "4px",
+                            "boxSizing": "border-box"
+                        }
                     ),
                     
                     # Description
@@ -366,7 +380,14 @@ def render_persona_cards(editing_id):
                     dcc.Input(
                         id={'type': 'edit-description', 'id': persona_id},
                         value=persona.get('description', ''),
-                        style={"width": "100%", "padding": "8px", "marginBottom": "12px", "border": "1px solid #d1d5db", "borderRadius": "4px"}
+                        style={
+                            "width": "100%",
+                            "padding": "8px",
+                            "marginBottom": "12px",
+                            "border": "1px solid #d1d5db",
+                            "borderRadius": "4px",
+                            "boxSizing": "border-box"
+                        }
                     ),
                     
                     # System Prompt
@@ -374,7 +395,18 @@ def render_persona_cards(editing_id):
                     dcc.Textarea(
                         id={'type': 'edit-system-prompt', 'id': persona_id},
                         value=current_prompts.get('system', ''),
-                        style={"width": "100%", "height": "120px", "padding": "8px", "marginBottom": "12px", "border": "1px solid #d1d5db", "borderRadius": "4px", "fontFamily": "monospace", "fontSize": "12px"}
+                        style={
+                            "width": "100%",
+                            "height": "120px",
+                            "padding": "8px",
+                            "marginBottom": "12px",
+                            "border": "1px solid #d1d5db",
+                            "borderRadius": "4px",
+                            "fontFamily": "monospace",
+                            "fontSize": "12px",
+                            "boxSizing": "border-box",
+                            "resize": "vertical"
+                        }
                     ),
                     
                     # User Template Prompt
@@ -382,7 +414,18 @@ def render_persona_cards(editing_id):
                     dcc.Textarea(
                         id={'type': 'edit-user-template', 'id': persona_id},
                         value=current_prompts.get('user_template', ''),
-                        style={"width": "100%", "height": "120px", "padding": "8px", "marginBottom": "16px", "border": "1px solid #d1d5db", "borderRadius": "4px", "fontFamily": "monospace", "fontSize": "12px"}
+                        style={
+                            "width": "100%",
+                            "height": "120px",
+                            "padding": "8px",
+                            "marginBottom": "16px",
+                            "border": "1px solid #d1d5db",
+                            "borderRadius": "4px",
+                            "fontFamily": "monospace",
+                            "fontSize": "12px",
+                            "boxSizing": "border-box",
+                            "resize": "vertical"
+                        }
                     ),
                     
                     # Action buttons
