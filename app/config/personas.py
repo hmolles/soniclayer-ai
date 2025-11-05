@@ -28,6 +28,14 @@ PERSONAS: List[Dict[str, str]] = [
         "worker_module": "app.workers.advertiser_worker",
         "chain_name": "advertiser_chain",
         "description": "Brand safety evaluator"
+    },
+    {
+        "id": "business_owner",
+        "display_name": "Business Owner",
+        "emoji": "🥸",
+        "worker_module": "app.workers.business_owner_worker",
+        "chain_name": "business_owner_chain",
+        "description": "Male business owner"
     }
 ]
 

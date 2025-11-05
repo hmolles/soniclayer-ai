@@ -15,6 +15,12 @@ PERSONAS = [
         "display_name": "Advertiser",
         "emoji": "💼",
         "description": "Brand safety evaluator"
+    },
+    {
+        "id": "business_owner",
+        "display_name": "Business Owner",
+        "emoji": "🥸",
+        "description": "Male business owner"
     }
 ]
 
