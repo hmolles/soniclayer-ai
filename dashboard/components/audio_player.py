@@ -5,7 +5,7 @@ def render_audio_player(audio_id: str):
     return html.Div([
         dash_player.DashPlayer(
             id="audio-player",
-            url=f"http://localhost:8000/audio/{audio_id}",
+            url=f"/audio/{audio_id}",
             controls=True,
             playing=False,
             intervalCurrentTime=250,

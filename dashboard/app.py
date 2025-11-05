@@ -33,6 +33,28 @@ if segments:
 
 app = Dash(__name__, assets_folder='assets')
 
+# Add audio proxy endpoint to serve audio through port 5000
+@app.server.route('/audio/<audio_id>')
+def proxy_audio(audio_id):
+    import requests
+    from flask import Response, stream_with_context
+    
+    # Fetch audio from backend
+    backend_url = f"http://localhost:8000/audio/{audio_id}"
+    try:
+        # Stream the audio from backend to browser
+        r = requests.get(backend_url, stream=True)
+        return Response(
+            stream_with_context(r.iter_content(chunk_size=8192)),
+            content_type='audio/wav',
+            headers={
+                'Accept-Ranges': 'bytes',
+                'Cache-Control': 'no-cache'
+            }
+        )
+    except Exception as e:
+        return Response(f"Error fetching audio: {str(e)}", status=500)
+
 # Enhanced layout with better styling
 app.layout = html.Div([
     # Header
