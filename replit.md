@@ -56,14 +56,16 @@ To run the full application on your local machine:
 See `README.md` and `QUICK_START.md` for detailed instructions.
 
 ## Recent Changes
-- Configured for Replit environment
-- Created simplified startup script (`start_app.py`)
-- Installed core dependencies (excluding ML packages)
-- Set up Redis via Nix
-- Created uploads/ and logs/ directories
+- **Dynamic Persona Registry System** - Refactored to support unlimited personas via central config
+- **Admin Interface** - Web-based UI for adding personas without editing code
+- **Multi-page Routing** - Dashboard and Admin pages with navigation menu
+- **JSON Validation** - Real-time validation for persona prompts
+- Configured for Replit environment with Azure OpenAI integration
+- Set up Redis via Nix for caching and job queues
 
 ## User Preferences
-None recorded yet.
+- Prefers scalable architecture that doesn't require code changes for new features
+- Values admin interfaces for non-technical users
 
 ## Known Issues
 - ML dependencies too large for Replit's disk quota
