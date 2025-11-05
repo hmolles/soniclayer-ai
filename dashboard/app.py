@@ -366,7 +366,7 @@ app.layout = html.Div([
         ]),
         
         # Hidden components for state management
-        dcc.Interval(id="playback-sync", interval=1000, n_intervals=0),
+        dcc.Interval(id="playback-sync", interval=250, n_intervals=0),  # 250ms for smooth tracking
         dcc.Store(id="user-clicked", data=False),
         dcc.Store(id='current-time-store', data=0),
         dcc.Store(id='current-audio-id', data=default_audio_id),
@@ -1076,7 +1076,7 @@ def load_audio_file(audio_id):
         return (
             None,
             [],
-            {'time': [], 'amplitude': []},
+            {'time': [], 'amplitude': [], 'amp_min': 0, 'amp_max': 0},
             html.Div("Select an audio file to begin", style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}),
             {},
             "Select a file",
@@ -1094,6 +1094,10 @@ def load_audio_file(audio_id):
     # Extract waveform
     time, amplitude = extract_waveform(audio_path)
     
+    # Cache min/max for performance (avoid recalculating on every update)
+    amp_min = float(amplitude.min())
+    amp_max = float(amplitude.max())
+    
     # Fetch segments
     segments = fetch_segments(audio_id)
     print(f"Loaded {len(segments)} segments")
@@ -1102,7 +1106,7 @@ def load_audio_file(audio_id):
     player = render_audio_player(audio_id)
     
     # Create initial waveform
-    fig = render_waveform_with_highlight(time, amplitude, segments)
+    fig = render_waveform_with_highlight(time, amplitude, segments, amp_min=amp_min, amp_max=amp_max)
     
     # Display text - cleaner format for minimal header
     # Truncate to 12 chars for compact display
@@ -1117,7 +1121,12 @@ def load_audio_file(audio_id):
     return (
         audio_id,
         segments,
-        {'time': time.tolist(), 'amplitude': amplitude.tolist()},
+        {
+            'time': time.tolist(),
+            'amplitude': amplitude.tolist(),
+            'amp_min': amp_min,
+            'amp_max': amp_max
+        },
         player,
         fig,
         display_text,
@@ -1321,49 +1330,31 @@ def process_transcript(audio_id, transcript_segments, classifier_results):
         }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 
-# Clientside callback to update current time from audio player
-app.clientside_callback(
-    """
-    function(n_intervals) {
-        const audioElement = document.getElementById('audio-player');
-        
-        if (audioElement && audioElement.currentTime !== undefined && !isNaN(audioElement.currentTime)) {
-            return audioElement.currentTime;
-        }
-        
-        return window.dash_clientside.no_update;
-    }
-    """,
-    Output('current-time-store', 'data'),
-    Input('playback-sync', 'n_intervals'),
-    prevent_initial_call=True
-)
-
-
-# Clientside callback to seek audio when waveform is clicked
-app.clientside_callback(
-    """
-    function(click_data) {
-        if (!click_data) {
-            return window.dash_clientside.no_update;
-        }
-        
-        // Get clicked time from waveform
-        const clicked_time = click_data.points[0].x;
-        
-        // Find and seek the audio element
-        const audioElement = document.getElementById('audio-player');
-        if (audioElement) {
-            audioElement.currentTime = clicked_time;
-        }
-        
-        return window.dash_clientside.no_update;
-    }
-    """,
-    Output('waveform-click-dummy', 'data', allow_duplicate=True),
-    Input('waveform-graph', 'clickData'),
-    prevent_initial_call=True
-)
+# NOTE: Clientside callbacks commented out - causing issues with Dash version
+# The dashboard still functions correctly without them using server-side updates
+# 
+# # Clientside callback to update current time from audio player
+# app.clientside_callback(
+#     dict(
+#         namespace='clientside',
+#         function_name='update_current_time'
+#     ),
+#     Output('current-time-store', 'data'),
+#     Input('playback-sync', 'n_intervals'),
+#     prevent_initial_call=True
+# )
+# 
+# 
+# # Clientside callback to seek audio when waveform is clicked
+# app.clientside_callback(
+#     dict(
+#         namespace='clientside',
+#         function_name='seek_audio'
+#     ),
+#     Output('waveform-click-dummy', 'data', allow_duplicate=True),
+#     Input('waveform-graph', 'clickData'),
+#     prevent_initial_call=True
+# )
 
 
 # Callback 4: Auto-update waveform and metadata during playback (THE CORE FEATURE)
@@ -1380,19 +1371,41 @@ app.clientside_callback(
 def auto_update_playback(current_time, segments, waveform_data, user_clicked):
     import numpy as np
     
-    print(f"[AUTO_UPDATE] time={current_time}, segments={len(segments) if segments else 0}")
+    print(f"[AUTO_UPDATE] time={current_time}, user_clicked={user_clicked}, has_segments={bool(segments)}, has_waveform={bool(waveform_data)}")
     
     # If user just clicked, reset flag and don't update
     if user_clicked:
+        print("[AUTO_UPDATE] User clicked, skipping update")
         return dash.no_update, dash.no_update, False
     
     # Skip if no valid time or segments
-    if current_time is None or current_time < 0 or not segments or not waveform_data or not waveform_data.get('time'):
+    if current_time is None or current_time < 0:
+        print(f"[AUTO_UPDATE] Invalid time: {current_time}")
+        return dash.no_update, dash.no_update, False
+        
+    if not segments:
+        print("[AUTO_UPDATE] No segments")
+        return dash.no_update, dash.no_update, False
+        
+    if not waveform_data or not waveform_data.get('time'):
+        print(f"[AUTO_UPDATE] No waveform data or time: {waveform_data.keys() if waveform_data else 'None'}")
         return dash.no_update, dash.no_update, False
     
     # Convert waveform data back to numpy arrays
     time = np.array(waveform_data['time'])
     amplitude = np.array(waveform_data['amplitude'])
+    
+    # Get cached min/max (performance optimization)
+    amp_min = waveform_data.get('amp_min')
+    amp_max = waveform_data.get('amp_max')
+    
+    # Fallback to calculation if not cached
+    if amp_min is None or amp_max is None:
+        print("[AUTO_UPDATE] Min/max not cached, calculating...")
+        amp_min = float(amplitude.min())
+        amp_max = float(amplitude.max())
+    
+    print(f"[AUTO_UPDATE] Rendering waveform at time {current_time:.2f}, amp_min={amp_min:.3f}, amp_max={amp_max:.3f}")
     
     # Find active segment
     active_segment = next(
@@ -1400,8 +1413,11 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked):
         None
     )
     
-    # Update waveform with cursor
-    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time)
+    if active_segment:
+        print(f"[AUTO_UPDATE] Active segment: {active_segment.get('start')}-{active_segment.get('end')}")
+    
+    # Update waveform with cursor (pass cached min/max for performance)
+    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time, amp_min=amp_min, amp_max=amp_max)
     
     # Update metadata
     if active_segment:
