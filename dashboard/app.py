@@ -163,35 +163,6 @@ def display_page(pathname):
     else:  # Default to dashboard
         return render_dashboard_page()
 
-# JSON validation callback
-@app.callback(
-    Output('json-validation-message', 'children'),
-    Input('persona-prompt-input', 'value')
-)
-def validate_json_prompt(prompt_text):
-    if not prompt_text or prompt_text.strip() == '':
-        return html.Div()
-    
-    try:
-        parsed = json.loads(prompt_text)
-        
-        # Check required fields
-        if 'system' not in parsed or 'user_template' not in parsed:
-            return html.Div("⚠️ JSON must contain 'system' and 'user_template' fields", style={
-                "color": "#dc2626",
-                "fontWeight": "500"
-            })
-        
-        return html.Div("✅ Valid JSON format", style={
-            "color": "#059669",
-            "fontWeight": "500"
-        })
-    except json.JSONDecodeError as e:
-        return html.Div(f"❌ Invalid JSON: {str(e)}", style={
-            "color": "#dc2626",
-            "fontWeight": "500"
-        })
-
 # Persona creation callback
 @app.callback(
     Output('creation-feedback', 'children'),

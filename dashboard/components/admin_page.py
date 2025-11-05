@@ -161,10 +161,6 @@ def render_admin_page():
                                 "boxSizing": "border-box",
                                 "resize": "vertical"
                             }
-                        ),
-                        html.Div(
-                            id="json-validation-message",
-                            style={"marginTop": "8px", "fontSize": "12px"}
                         )
                     ], style={"marginBottom": "20px"}),
                     
