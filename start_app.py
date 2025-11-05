@@ -73,7 +73,9 @@ def read_root():
             <div class="status">
                 <strong>⚠️ Setup Required</strong><br>
                 This application requires additional ML dependencies (PyTorch, Whisper, Transformers) 
-                that are too large for the current Replit environment.
+                that are too large for the current Replit environment.<br><br>
+                <strong>Note:</strong> Redis and background job workers are not running in Replit. 
+                Full functionality requires a local setup or larger cloud instance.
             </div>
             
             <h2>Features</h2>
@@ -98,11 +100,13 @@ def read_root():
             
             <h2>Documentation</h2>
             <ul>
-                <li><a href="https://github.com/yourusername/soniclayer-ai">View README.md</a></li>
-                <li><a href="/docs">API Documentation</a> (when backend is running)</li>
+                <li>View <code>README.md</code> - Main project documentation</li>
+                <li>View <code>QUICK_START.md</code> - 7-step setup guide</li>
+                <li>View <code>DEPLOYMENT.md</code> - Production deployment guide</li>
+                <li><a href="/docs">API Documentation</a> (when full backend is running)</li>
             </ul>
             
-            <p><em>See <code>README.md</code> and <code>QUICK_START.md</code> for complete setup instructions.</em></p>
+            <p><em>This is a demo placeholder. Clone the repository to your local machine for full functionality.</em></p>
         </div>
     </body>
     </html>

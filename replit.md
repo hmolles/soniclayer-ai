@@ -69,3 +69,19 @@ None recorded yet.
 - ML dependencies too large for Replit's disk quota
 - Full pipeline requires local setup or larger cloud instance
 - Langflow and LM Studio not available in Replit
+- Redis and RQ workers not running in Replit environment
+- Background job processing disabled
+
+## Running the Simplified Demo
+The simplified FastAPI app can be tested locally without ML dependencies:
+```bash
+python start_app.py
+# Visit http://localhost:5000 to see the setup information page
+```
+
+## Deployment
+For production deployment guidance, see `DEPLOYMENT.md` which covers:
+- Docker Compose setup
+- Systemd service configuration
+- Environment variables
+- Security considerations
