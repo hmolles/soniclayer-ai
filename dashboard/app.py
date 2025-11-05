@@ -190,58 +190,84 @@ app.layout = html.Div([
     
     # Main content area (with left margin for sidebar)
     html.Div([
-        # Header
+        # Minimal Header - Phase 1 Redesign
         html.Div([
+            # Left section - title and audio ID inline
             html.Div([
-                html.H1("🎵 SonicLayer AI", style={
-                    "margin": "0",
-                    "fontSize": "28px",
-                    "fontWeight": "700",
-                    "background": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    "WebkitBackgroundClip": "text",
-                    "WebkitTextFillColor": "transparent",
-                    "display": "inline-block"
-                }),
-                html.P("Audio Analysis Dashboard", style={
-                    "margin": "4px 0 12px 0",
-                    "fontSize": "14px",
-                    "color": "#6b7280",
-                    "fontWeight": "500"
-                }),
-                html.P(id="dashboard-audio-id-display", children="Select an audio file from the sidebar", style={
-                    "margin": "4px 0 0 0",
-                    "color": "#6b7280",
-                    "fontSize": "14px"
-                })
-            ]),
-            html.Div([
-                html.Button("⚙️ Admin", id="admin-toggle-btn", n_clicks=0, style={
-                    "padding": "8px 16px",
-                    "borderRadius": "6px",
-                    "border": "1px solid #e5e7eb",
-                    "backgroundColor": "#ffffff",
-                    "color": "#374151",
+                html.Span("SonicLayer AI", style={
+                    "fontSize": "16px",
                     "fontWeight": "500",
+                    "color": "#030213",
+                    "marginRight": "12px"
+                }),
+                html.Span("•", style={
                     "fontSize": "14px",
-                    "cursor": "pointer"
+                    "color": "#717182",
+                    "marginRight": "12px"
+                }),
+                html.Span(id="dashboard-audio-id-display", children="Select a file", style={
+                    "fontSize": "13px",
+                    "color": "#717182",
+                    "fontWeight": "400",
+                    "maxWidth": "300px",
+                    "overflow": "hidden",
+                    "textOverflow": "ellipsis",
+                    "whiteSpace": "nowrap",
+                    "display": "inline-block"
                 })
             ], style={
-                "position": "absolute",
-                "top": "20px",
-                "right": "20px"
-            })
+                "display": "flex",
+                "alignItems": "center"
+            }),
+            # Right section - admin button
+            html.Div([
+                html.Button("⚙️ Admin", id="admin-toggle-btn", n_clicks=0, style={
+                    "padding": "6px 12px",
+                    "borderRadius": "6px",
+                    "border": "1px solid rgba(0,0,0,0.08)",
+                    "backgroundColor": "#ffffff",
+                    "color": "#030213",
+                    "fontWeight": "500",
+                    "fontSize": "13px",
+                    "cursor": "pointer",
+                    "transition": "all 0.2s ease"
+                })
+            ])
         ], style={
-            "padding": "20px",
-            "backgroundColor": "#ffffff",
-            "borderBottom": "2px solid #e5e7eb",
-            "marginBottom": "20px",
-            "position": "relative"
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "padding": "10px 20px",
+            "backgroundColor": "#fafafa",
+            "borderBottom": "1px solid rgba(0,0,0,0.08)"
         }),
         
-        # Tabs for different views
-        dcc.Tabs(id="main-tabs", value="analysis-tab", children=[
+        # Tabs for different views - Minimal styling
+        dcc.Tabs(id="main-tabs", value="analysis-tab", 
+            style={
+                "borderBottom": "1px solid rgba(0,0,0,0.08)",
+                "backgroundColor": "#fafafa"
+            },
+            children=[
             # Tab 1: Analysis View (current waveform + metadata)
-            dcc.Tab(label="📊 Analysis", value="analysis-tab", children=[
+            dcc.Tab(label="Analysis", value="analysis-tab", 
+                style={
+                    "padding": "8px 16px",
+                    "fontSize": "14px",
+                    "fontWeight": "400",
+                    "color": "#717182",
+                    "border": "none",
+                    "borderBottom": "2px solid transparent"
+                },
+                selected_style={
+                    "padding": "8px 16px",
+                    "fontSize": "14px",
+                    "fontWeight": "500",
+                    "color": "#030213",
+                    "border": "none",
+                    "borderBottom": "2px solid #030213"
+                },
+                children=[
                 html.Div([
                     # Left column - Waveform and audio player
                     html.Div([
@@ -288,17 +314,34 @@ app.layout = html.Div([
             ]),
             
             # Tab 2: Summary View (new aggregated stats)
-            dcc.Tab(label="📈 Summary", value="summary-tab", children=[
-                html.Div(id="summary-content", children=html.Div(
-                    "Select an audio file to view summary",
-                    style={"padding": "40px", "color": "#6b7280", "textAlign": "center", "fontSize": "16px"}
-                ), style={
-                    "padding": "20px"
-                })
+            dcc.Tab(label="Summary", value="summary-tab",
+                style={
+                    "padding": "8px 16px",
+                    "fontSize": "14px",
+                    "fontWeight": "400",
+                    "color": "#717182",
+                    "border": "none",
+                    "borderBottom": "2px solid transparent"
+                },
+                selected_style={
+                    "padding": "8px 16px",
+                    "fontSize": "14px",
+                    "fontWeight": "500",
+                    "color": "#030213",
+                    "border": "none",
+                    "borderBottom": "2px solid #030213"
+                },
+                children=[
+                html.Div(
+                    id="summary-content",
+                    children=html.Div(
+                        "Select an audio file to view summary",
+                        style={"padding": "40px", "color": "#6b7280", "textAlign": "center", "fontSize": "16px"}
+                    ),
+                    style={"padding": "20px"}
+                )
             ])
-        ], style={
-            "marginBottom": "0"
-        }),
+        ]),
         
         # Hidden components for state management
         dcc.Interval(id="playback-sync", interval=1000, n_intervals=0),
@@ -1014,7 +1057,7 @@ def load_audio_file(audio_id):
             {'time': [], 'amplitude': []},
             html.Div("Select an audio file to begin", style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}),
             {},
-            "Select an audio file from the sidebar",
+            "Select a file",
             html.Div("Select an audio file to view analysis", style={"padding": "20px", "color": "#6b7280"})
         )
     
@@ -1039,8 +1082,9 @@ def load_audio_file(audio_id):
     # Create initial waveform
     fig = render_waveform_with_highlight(time, amplitude, segments)
     
-    # Display text
-    display_text = f"Audio ID: {audio_id[:16]}..."
+    # Display text - cleaner format for minimal header
+    # Truncate to 12 chars for compact display
+    display_text = f"{audio_id[:12]}..." if len(audio_id) > 12 else audio_id
     
     # Initial metadata (first segment)
     if segments and len(segments) > 0:
@@ -1384,7 +1428,7 @@ def handle_waveform_click(click_data, segments):
 @app.callback(
     Output('summary-data-store', 'data'),
     Input('current-audio-id', 'data'),
-    prevent_initial_call=False
+    prevent_initial_call=True
 )
 def fetch_summary_data(audio_id):
     """Fetch summary when audio changes."""
@@ -1408,7 +1452,7 @@ def fetch_summary_data(audio_id):
     Output('summary-panel-container', 'children'),
     Input('summary-data-store', 'data'),
     State('summary-collapsed', 'data'),
-    prevent_initial_call=False
+    prevent_initial_call=True
 )
 def update_summary_panel(summary_data, is_collapsed):
     """Render collapsible summary panel on main dashboard."""
@@ -1424,42 +1468,29 @@ def update_summary_panel(summary_data, is_collapsed):
     return render_collapsible_summary(personas, summary_data, is_expanded=not is_collapsed)
 
 
-# Callback 6.3: Toggle summary collapse state (Phase 3)
+# Callback 6.3: Toggle summary collapse state (Phase 3) - SIMPLIFIED
+# Only update the collapse state store. The panel re-render is handled by update_summary_panel.
 @app.callback(
     Output('summary-collapsed', 'data'),
-    Output('summary-collapse-content', 'style'),
-    Output('summary-collapse-toggle', 'children'),
+    Output('summary-panel-container', 'children', allow_duplicate=True),
     Input('summary-collapse-toggle', 'n_clicks'),
     State('summary-collapsed', 'data'),
     State('summary-data-store', 'data'),
     prevent_initial_call=True
 )
 def toggle_summary_collapse(n_clicks, is_collapsed, summary_data):
-    """Toggle the collapse state of the summary panel."""
+    """Toggle the collapse state and re-render the summary panel."""
     if summary_data is None:
         raise PreventUpdate
     
     # Toggle state
     new_collapsed = not is_collapsed
-    num_segments = summary_data.get("num_segments", 0)
     
-    # Update display style
-    display_style = {
-        "padding": "16px",
-        "backgroundColor": "#ffffff",
-        "borderRadius": "0 0 8px 8px",
-        "border": "1px solid #e5e7eb",
-        "borderTop": "none",
-        "display": "none" if new_collapsed else "block"
-    }
+    # Re-render the entire panel with new state
+    personas = get_all_personas()
+    new_panel = render_collapsible_summary(personas, summary_data, is_expanded=not new_collapsed)
     
-    # Update button text
-    button_children = [
-        html.Span("▶" if new_collapsed else "▼", style={"marginRight": "8px"}),
-        html.Span(f"📊 Summary ({num_segments} segments)", style={"fontWeight": "600"})
-    ]
-    
-    return new_collapsed, display_style, button_children
+    return new_collapsed, new_panel
 
 
 # ============================================================================
