@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from openai import AzureOpenAI
 
 # Azure GPT-4o-mini configuration for Langflow replacement
@@ -111,12 +112,9 @@ def call_langflow_chain(flow_name: str, segment: dict) -> dict:
         result_text = content.strip()
         
         # Strip markdown code blocks if present (Azure sometimes wraps JSON in ```json ... ```)
-        if result_text.startswith("```json"):
-            result_text = result_text[7:]  # Remove ```json
-        if result_text.startswith("```"):
-            result_text = result_text[3:]  # Remove ```
-        if result_text.endswith("```"):
-            result_text = result_text[:-3]  # Remove closing ```
+        # Use regex to handle various markdown formats robustly
+        result_text = re.sub(r'^```(?:json)?\s*', '', result_text)  # Remove opening ``` or ```json
+        result_text = re.sub(r'\s*```*$', '', result_text)  # Remove closing ``` (even if incomplete)
         result_text = result_text.strip()
         
         # Parse JSON response
