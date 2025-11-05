@@ -1,0 +1,295 @@
+
+
+/
+
+
+Open a new tab to test authentication and file uploads.
+New tab
+Learn more
+
+
+
+Commit
+
+
+Add a way for users to securely log in to their accounts
+
+768bf89
+
+Restore All
+
+Implement JWT-based authentication middleware and update user login API endpoint.
+
+HA
+
+hanimolles
+hanimolles
+committed
+2 hours ago
+1 parent 
+Filter changed files
+Showing 0 changed files.
+Search for a workflow...
+
+New Workflow
+Learn more about configuring Workflows
+Agent Workflows
+
+
+
+Enable "Accessible Terminal" in Workspace Settings to use a screen reader with the shell.
+
+
+BACKEND_PORT=8000 python run_backend.py
+
+Ask Agent…
+156m
+ • 
+3 hours ago
+
+
+python run_worker.py
+
+Ask Agent…
+156m
+ • 
+3 hours ago
+
+
+./run_redis.sh
+
+Ask Agent…
+134m
+ • 
+2 hours ago
+
+
+PORT=5000 python dashboard/app.py 50f5315356317fa1a803bc5a754e4899d3275b711590f5baa7db35947f04bf70
+
+Ask Agent…
+9m
+ • 
+10 minutes ago
+
+import json
+import logging
+from app.services.cache import redis_conn
+from app.services.langflow_client import call_langflow_chain
+
+logger = logging.getLogger(__name__)
+
+
+def process_transcript(audio_id, transcript_segments, classifier_results):
+    """
+    Process transcript segments using Business Owner Langflow chain.
+    
+    Args:
+        audio_id: Unique audio identifier (hash of audio file)
+        transcript_segments: List of segment dicts with 'text' field
+        classifier_results: List of classification dicts with 'topic' and 'tone'
+    """
+    feedback = []
+    
+    for i, segment in enumerate(transcript_segments):
+        segment_id = classifier_results[i].get("segment_id", i)
+        
+        # Build segment input for Langflow
+        segment_input = json.dumps({
+            "text": segment.get("text", ""),
+            "topic": classifier_results[i].get("topic", ""),
+            "tone": classifier_results[i].get("tone", "")
+        })
+        
+        # Call Langflow Business Owner chain
+        try:
+            result = call_langflow_chain("business_owner_chain", segment_input)
+            logger.info(f"Business Owner evaluation for segment {segment_id}: {result}")
+        except Exception as e:
+            logger.error(f"Error calling Business Owner Langflow chain for segment {segment_id}: {e}")
+            # Fallback to default response on error
+            result = {
+                "score": 3,
+                "opinion": "Unable to evaluate",
+                "rationale": f"Error: {str(e)}",
+                "confidence": 0.0,
+                "note": "Langflow call failed"
+            }
+        
+        # Store feedback with segment ID
+        feedback.append({
+            "segment_id": segment_id,
+            "business_owner": result
+        })
+        
+        # Store individual segment feedback in Redis
+        redis_conn.set(
+            f"persona_feedback:business_owner:{audio_id}:{segment_id}",
+            json.dumps(result),
+            ex=86400
+        )
+    
+    # Store aggregated feedback
+    redis_conn.set(
+        f"persona_feedback:business_owner:{audio_id}",
+        json.dumps(feedback),
+        ex=86400
+    )
+    
+    return feedback
+
+
+Add a search function to find specific items quickly and easily
+
+Agent 3
+
+
+Show previous events
+1 minute of work
+It looks like the segment display and metadata are not updating as audio plays - looks like the same issue as before.
+
+29 minutes ago
+
+3 messages & 6 actions
+You're right! The metadata panel isn't auto-updating during playback. I need to add the callback that tracks the current playback position and updates the metadata. Let me fix that:
+Checkpoint made
+28 minutes ago
+Update segment display and metadata automatically during audio playback
+
+Rollback here
+
+Changes
+
+Preview
+59 seconds of work
+the segment highlighting is not working
+
+27 minutes ago
+
+3 messages & 6 actions
+You're right! The waveform isn't updating to highlight the current segment during playback. I need to add a callback that redraws the waveform with the current playback cursor. Let me fix that:
+Checkpoint made
+26 minutes ago
+Update playback to include waveform highlighting during playback
+
+Rollback here
+
+Changes
+
+Preview
+54 seconds of work
+nope - metadata is not updating with playback and segments are not highlighted.
+
+24 minutes ago
+
+10 messages & 23 actions
+Let me check the logs to see what's happening with the callbacks:
+Checkpoint made
+22 minutes ago
+Improve playback and segment highlighting by fixing metadata updates
+
+Rollback here
+
+Changes
+
+Preview
+2 minutes of work
+no, I am clicking play and it is not working - no metadata updates no cursor display no segment hightlighting. I can press play if you need to monitor logs.
+
+Was there something else you commented out or need to refactor now that you added the file browser?
+
+20 minutes ago
+
+4 messages & 15 actions
+Let me check the logs to see what's happening when you play the audio:
+Checkpoint made
+18 minutes ago
+Improve audio playback and metadata display during playback
+
+Rollback here
+
+Changes
+
+Preview
+Option 1 please - Refactor the routing
+
+18 minutes ago
+
+13 messages & 35 actions
+Perfect! I'll refactor the routing to use `display: none/block` so all components exist at the app level. This will fix the auto-updating issue.
+Checkpoint made
+15 minutes ago
+Refactor dashboard page to dynamically load audio analysis and data
+
+Rollback here
+
+Changes
+
+Preview
+3 minutes of work
+It is not working
+
+13 minutes ago
+
+3 messages & 6 actions
+Let me check the logs to see what's happening when you press play:
+Checkpoint made
+12 minutes ago
+Add detailed logging to track playback updates and user interactions
+
+Rollback here
+
+Changes
+
+Preview
+47 seconds of work
+I have done this - anything in the logs?
+
+11 minutes ago
+
+8 messages & 22 actions
+Excellent! The Python callback **IS being called** - I can see hundreds of updates in the logs: ``` [AUTO_UPDATE] Called! time=0.641932, clicked=False, has_segments=True, has_waveform=True [AUTO_UPDATE] Called! time=1.6371, clicked=False, has_segments=True, has_waveform=True ... [AUTO_UPDATE] Called! time=15.850374, clicked=False, has_segments=True, has_waveform=True ``` **The callback is working!** But the browser isn't rendering the updates. This is because the `load_dashboard_data` callback is also trying to update the same outputs (`waveform-graph.figure`, `audio-player-container.children`), which creates a conflict. The fix: **Separate the concerns** - the data loader should ONLY update stores, and let dedicated callbacks handle the visual updates. Let me refactor:
+Checkpoint made
+9 minutes ago
+Refactor dashboard to load data into stores
+
+Rollback here
+
+Changes
+
+Preview
+2 minutes of work
+Having the segments/transcriptions/metadata update while the audio plays is the core feature of this app so we cannot do without it.
+
+I do not understand why we cannot have it now - it worked before.
+
+Can you do the file browser a different way - explain to me in detail why things have been done the way they have been. Why it is broken and why you cannot fix it.
+
+5 minutes ago
+
+Decided on modal file browser approach (21 seconds)
+You're absolutely right, and I apologize for breaking the core feature. Let me explain exactly what happened and how to fix it.
+
+What Worked Before
+The original dashboard was a single-page application:
+
+All components (waveform, metadata panel, audio player) existed at the app's top level
+The audio_id came from a command-line argument
+Callbacks could freely update all components during playback
+✅ Auto-updating worked perfectly
+What I Changed (and Why It Broke)
+When you asked for a file browser, I implemented multi-page routing:
+
+/files → File Browser Page
+/dashboard?audio_id=... → Dashboard Page  
+/admin → Admin Page
+
+The Problem: In Dash, when you use routing, the dashboard components get created inside a callback that fires when the URL changes. Once components are created this way, other callbacks cannot reliably update them. This is a fundamental Dash architecture limitation.
+
+I then tried to fix it by:
+
+Keeping all pages in the layout but hiding them with display: none
+But I still had one callback loading the data AND updating visual components
+This conflicted with the playback callback trying to update the same components
+Result: Updates get lost/blocked
+The Real Solution (No Routing Required)
+Put the file browser INSIDE the dashboard as a sidebar/dropdown - no routing at all:
