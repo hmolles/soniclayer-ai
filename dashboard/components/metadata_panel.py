@@ -1,11 +1,5 @@
 """Metadata panel component for displaying segment information."""
 from dash import html
-import sys
-from pathlib import Path
-
-# Add parent directory to path to import from app
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from app.config.personas import get_all_personas
 
 
 def get_score_color(score):
@@ -152,6 +146,12 @@ def render_metadata_panel(segment):
     Returns:
         Dash HTML component or None
     """
+    # Lazy import to avoid circular import issues
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from app.config.personas import get_all_personas
+    
     if segment is None:
         return html.Div(
             "🎵 No segment selected - click on the waveform or wait for playback",
