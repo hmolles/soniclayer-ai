@@ -7,27 +7,27 @@ AZURE_GPT_KEY = os.getenv("AZURE_GPT_KEY")
 AZURE_GPT_DEPLOYMENT = "gpt-4o-mini"
 AZURE_GPT_API_VERSION = "2025-01-01-preview"
 
-TOPIC_LABELS = 
-["Health",
- "Entertainment",
- "Politics",
- "Technology",
- "Food",
- "Education",
- "Environment",
- "Science",
- "Business & Finance",
- "Sports",
- "Travel",
- "Lifestyle",
- "Culture & Arts",
- "Crime & Law",
- "Weather & Climate",
- "Community & Local",
- "International Affairs",
- "Advertising & Marketing",
- "Religion & Spirituality",
- "Opinion & Editorial"
+TOPIC_LABELS = [
+    "Health",
+    "Entertainment",
+    "Politics",
+    "Technology",
+    "Food",
+    "Education",
+    "Environment",
+    "Science",
+    "Business & Finance",
+    "Sports",
+    "Travel",
+    "Lifestyle",
+    "Culture & Arts",
+    "Crime & Law",
+    "Weather & Climate",
+    "Community & Local",
+    "International Affairs",
+    "Advertising & Marketing",
+    "Religion & Spirituality",
+    "Opinion & Editorial"
 ]
 TONE_LABELS = [
  "Informative",
