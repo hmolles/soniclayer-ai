@@ -146,11 +146,11 @@ def render_metadata_panel(segment):
     Returns:
         Dash HTML component or None
     """
-    # Lazy import to avoid circular import issues
+    # Import personas from dashboard config
     import sys
     from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-    from app.config.personas import get_all_personas
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from personas_config import get_all_personas
     
     if segment is None:
         return html.Div(
