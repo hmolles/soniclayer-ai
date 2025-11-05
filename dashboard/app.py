@@ -97,38 +97,40 @@ def create_file_sidebar():
                         avg_score = mini_stats["avg_score"]
                         
                         badge = html.Span([
-                            html.Span(emoji, style={"marginRight": "2px"}),
-                            html.Span(f"{avg_score:.1f}", style={"fontWeight": "600"})
+                            html.Span(emoji, style={"marginRight": "3px", "fontSize": "11px"}),
+                            html.Span(f"{avg_score:.1f}", style={
+                                "fontWeight": "500",
+                                "fontSize": "11px"
+                            })
                         ], style={
                             "display": "inline-block",
                             "padding": "2px 6px",
                             "marginRight": "4px",
-                            "fontSize": "10px",
-                            "borderRadius": "4px",
-                            "backgroundColor": get_score_color(avg_score) + "20",
-                            "color": get_score_color(avg_score),
-                            "border": f"1px solid {get_score_color(avg_score)}40"
+                            "fontSize": "11px",
+                            "borderRadius": "3px",
+                            "backgroundColor": "#fafafa",  # Subtle gray background
+                            "color": "#64748b",  # slate-500
+                            "border": "none"  # No borders - minimal design
                         })
                         summary_badges.append(badge)
             
             item = html.Button([
-                html.Span("🎵", style={"fontSize": "20px", "marginRight": "8px"}),
                 html.Div([
                     html.Div(short_id, style={
                         "fontSize": "13px",
-                        "fontWeight": "600",
-                        "color": "#111827" if not is_selected else "#2563eb",
-                        "marginBottom": "2px"
+                        "fontWeight": "500",
+                        "color": "#0f172a" if not is_selected else "#0f172a",  # slate-900
+                        "marginBottom": "4px"
                     }),
                     html.Div(f"{audio['num_segments']} segments", style={
-                        "fontSize": "11px",
-                        "color": "#6b7280",
-                        "marginBottom": "4px" if summary_badges else "0"
+                        "fontSize": "12px",
+                        "color": "#94a3b8",  # slate-400
+                        "marginBottom": "6px" if summary_badges else "0"
                     }),
                     html.Div(summary_badges, style={
                         "display": "flex",
                         "flexWrap": "wrap",
-                        "gap": "2px"
+                        "gap": "3px"
                     }) if summary_badges else None
                 ], style={
                     "flex": "1",
@@ -140,17 +142,18 @@ def create_file_sidebar():
             **{"data-audio-id": audio["audio_id"]},  # Store audio_id in data attribute
             style={
                 "display": "flex",
-                "alignItems": "center",
+                "alignItems": "flex-start",
                 "width": "100%",
-                "padding": "14px",
-                "marginBottom": "12px",
-                "backgroundColor": "#ffffff" if not is_selected else "#eff6ff",
-                "border": f"2px solid {'#3b82f6' if is_selected else '#e5e7eb'}",
-                "borderRadius": "10px",
+                "padding": "12px",
+                "marginBottom": "4px",
+                "backgroundColor": "#fafafa" if is_selected else "transparent",  # Minimal background
+                "border": "none",  # NO borders - extreme minimalism
+                "borderLeft": f"2px solid {'#0f172a' if is_selected else 'transparent'}",  # Subtle left accent only
+                "borderRadius": "0",  # No rounded corners
                 "cursor": "pointer",
                 "textAlign": "left",
-                "transition": "all 0.2s ease",
-                "boxShadow": "0 1px 2px rgba(0,0,0,0.05)" if not is_selected else "0 4px 6px rgba(59, 130, 246, 0.15)"
+                "transition": "all 0.15s ease",
+                "boxShadow": "none"  # NO shadows
             })
             
             file_items.append(item)
@@ -159,22 +162,27 @@ def create_file_sidebar():
     
     return html.Div([
         html.H3([
-            html.Span("📁 ", style={"marginRight": "8px"}),
-            html.Span("Audio Files", style={"fontWeight": "600", "fontSize": "16px"}),
-            html.Span(f" ({len(audio_files)})", style={
+            html.Span("Audio Files", style={
+                "fontWeight": "500",
+                "fontSize": "13px",
+                "color": "#0f172a",  # slate-900
+                "textTransform": "uppercase",
+                "letterSpacing": "0.05em"
+            }),
+            html.Span(f" {len(audio_files)}", style={
                 "fontWeight": "400",
-                "fontSize": "14px",
-                "color": "#6b7280",
-                "marginLeft": "4px"
+                "fontSize": "13px",
+                "color": "#94a3b8",  # slate-400
+                "marginLeft": "6px"
             }) if audio_files else ""
-        ], style={"margin": "0 0 16px 0"}),
+        ], style={"margin": "0 0 20px 0"}),
         file_list,
         dcc.Store(id="selected-audio-store", data=default_audio_id)  # Hidden store for selected file
     ], style={
         "width": "280px",
         "backgroundColor": "#ffffff",
-        "borderRight": "2px solid #e5e7eb",
-        "padding": "20px",
+        "borderRight": "1px solid #f1f5f9",  # slate-100
+        "padding": "20px 16px",
         "overflowY": "auto",
         "height": "100vh",
         "position": "fixed",
@@ -190,24 +198,24 @@ app.layout = html.Div([
     
     # Main content area (with left margin for sidebar)
     html.Div([
-        # Minimal Header - Phase 1 Redesign
+        # Extreme Minimal Header
         html.Div([
             # Left section - title and audio ID inline
             html.Div([
                 html.Span("SonicLayer AI", style={
-                    "fontSize": "16px",
+                    "fontSize": "14px",
                     "fontWeight": "500",
-                    "color": "#030213",
+                    "color": "#0f172a",  # slate-900
                     "marginRight": "12px"
                 }),
-                html.Span("•", style={
+                html.Span("·", style={
                     "fontSize": "14px",
-                    "color": "#717182",
+                    "color": "#cbd5e1",  # slate-300
                     "marginRight": "12px"
                 }),
                 html.Span(id="dashboard-audio-id-display", children="Select a file", style={
                     "fontSize": "13px",
-                    "color": "#717182",
+                    "color": "#94a3b8",  # slate-400
                     "fontWeight": "400",
                     "maxWidth": "300px",
                     "overflow": "hidden",
@@ -221,51 +229,53 @@ app.layout = html.Div([
             }),
             # Right section - admin button
             html.Div([
-                html.Button("⚙️ Admin", id="admin-toggle-btn", n_clicks=0, style={
+                html.Button("Admin", id="admin-toggle-btn", n_clicks=0, style={
                     "padding": "6px 12px",
-                    "borderRadius": "6px",
-                    "border": "1px solid rgba(0,0,0,0.08)",
+                    "borderRadius": "4px",
+                    "border": "1px solid #f1f5f9",  # slate-100
                     "backgroundColor": "#ffffff",
-                    "color": "#030213",
-                    "fontWeight": "500",
+                    "color": "#64748b",  # slate-500
+                    "fontWeight": "400",
                     "fontSize": "13px",
                     "cursor": "pointer",
-                    "transition": "all 0.2s ease"
+                    "transition": "all 0.15s ease"
                 })
             ])
         ], style={
             "display": "flex",
             "justifyContent": "space-between",
             "alignItems": "center",
-            "padding": "10px 20px",
-            "backgroundColor": "#fafafa",
-            "borderBottom": "1px solid rgba(0,0,0,0.08)"
+            "padding": "16px 32px",
+            "backgroundColor": "#ffffff",  # Pure white
+            "borderBottom": "1px solid #f1f5f9"  # slate-100 - subtle separator
         }),
         
-        # Tabs for different views - Minimal styling
+        # Tabs for different views - Extreme minimal styling
         dcc.Tabs(id="main-tabs", value="analysis-tab", 
             style={
-                "borderBottom": "1px solid rgba(0,0,0,0.08)",
-                "backgroundColor": "#fafafa"
+                "borderBottom": "1px solid #f1f5f9",  # slate-100
+                "backgroundColor": "#ffffff"
             },
             children=[
             # Tab 1: Analysis View (current waveform + metadata)
             dcc.Tab(label="Analysis", value="analysis-tab", 
                 style={
-                    "padding": "8px 16px",
-                    "fontSize": "14px",
+                    "padding": "12px 20px",
+                    "fontSize": "13px",
                     "fontWeight": "400",
-                    "color": "#717182",
+                    "color": "#94a3b8",  # slate-400
                     "border": "none",
-                    "borderBottom": "2px solid transparent"
+                    "borderBottom": "2px solid transparent",
+                    "backgroundColor": "transparent"
                 },
                 selected_style={
-                    "padding": "8px 16px",
-                    "fontSize": "14px",
+                    "padding": "12px 20px",
+                    "fontSize": "13px",
                     "fontWeight": "500",
-                    "color": "#030213",
+                    "color": "#0f172a",  # slate-900
                     "border": "none",
-                    "borderBottom": "2px solid #030213"
+                    "borderBottom": "2px solid #0f172a",  # slate-900
+                    "backgroundColor": "transparent"
                 },
                 children=[
                 html.Div([
@@ -274,12 +284,12 @@ app.layout = html.Div([
                         # Collapsible summary panel (Phase 3)
                         html.Div(id="summary-panel-container", children=html.Div(
                             "Loading summary...",
-                            style={"padding": "16px", "color": "#6b7280", "fontStyle": "italic"}
+                            style={"padding": "20px", "color": "#94a3b8", "fontStyle": "normal", "fontSize": "13px"}
                         )),
                         
                         html.Div(id="audio-player-container", children=html.Div(
                             "Select an audio file to begin",
-                            style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}
+                            style={"padding": "32px 20px", "color": "#94a3b8", "textAlign": "center", "fontSize": "13px"}
                         )),
                         dcc.Graph(
                             id="waveform-graph",
@@ -296,49 +306,61 @@ app.layout = html.Div([
                     # Right column - Metadata panel
                     html.Div(
                         id="segment-metadata",
-                        children=html.Div("Select an audio file to view analysis", style={"padding": "20px", "color": "#6b7280"}),
+                        children=html.Div("Select an audio file to view analysis", style={
+                            "padding": "32px 20px",
+                            "color": "#94a3b8",
+                            "fontSize": "13px"
+                        }),
                         style={
                             "width": "450px",
                             "backgroundColor": "#ffffff",
-                            "borderRadius": "8px",
-                            "border": "1px solid #e5e7eb",
+                            "borderRadius": "0",  # No rounded corners
+                            "border": "1px solid #f1f5f9",  # slate-100
                             "maxHeight": "600px",
                             "overflowY": "auto",
-                            "boxShadow": "0 1px 3px rgba(0,0,0,0.1)"
+                            "boxShadow": "none"  # NO shadows
                         }
                     )
                 ], style={
                     "display": "flex",
-                    "padding": "20px",
+                    "padding": "32px",  # Generous whitespace
+                    "gap": "32px"  # Large gap between columns
                 })
             ]),
             
             # Tab 2: Summary View (new aggregated stats)
             dcc.Tab(label="Summary", value="summary-tab",
                 style={
-                    "padding": "8px 16px",
-                    "fontSize": "14px",
+                    "padding": "12px 20px",
+                    "fontSize": "13px",
                     "fontWeight": "400",
-                    "color": "#717182",
+                    "color": "#94a3b8",  # slate-400
                     "border": "none",
-                    "borderBottom": "2px solid transparent"
+                    "borderBottom": "2px solid transparent",
+                    "backgroundColor": "transparent"
                 },
                 selected_style={
-                    "padding": "8px 16px",
-                    "fontSize": "14px",
+                    "padding": "12px 20px",
+                    "fontSize": "13px",
                     "fontWeight": "500",
-                    "color": "#030213",
+                    "color": "#0f172a",  # slate-900
                     "border": "none",
-                    "borderBottom": "2px solid #030213"
+                    "borderBottom": "2px solid #0f172a",  # slate-900
+                    "backgroundColor": "transparent"
                 },
                 children=[
                 html.Div(
                     id="summary-content",
                     children=html.Div(
                         "Select an audio file to view summary",
-                        style={"padding": "40px", "color": "#6b7280", "textAlign": "center", "fontSize": "16px"}
+                        style={
+                            "padding": "80px 32px",
+                            "color": "#94a3b8",  # slate-400
+                            "textAlign": "center",
+                            "fontSize": "13px"
+                        }
                     ),
-                    style={"padding": "20px"}
+                    style={"padding": "32px"}  # Generous padding
                 )
             ])
         ]),

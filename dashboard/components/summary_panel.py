@@ -30,21 +30,23 @@ def get_score_color(score: float) -> str:
         return "#ef4444"  # Red - Low
 
 
-def create_distribution_bar(score_distribution: dict, height: int = 200) -> go.Figure:
+def create_distribution_bar(score_distribution: dict, height: int = 120) -> go.Figure:
     """
-    Create a horizontal bar chart for score distribution.
+    Create a minimal horizontal bar chart for score distribution.
     
     Args:
         score_distribution: Dict mapping score (1-5) to count
                            Example: {"1": 2, "2": 5, "3": 8, "4": 3, "5": 0}
-        height: Chart height in pixels
+        height: Chart height in pixels (default: 120 for compact design)
         
     Returns:
         Plotly figure object
     """
     scores = ["1★", "2★", "3★", "4★", "5★"]
     counts = [score_distribution.get(str(i), 0) for i in range(1, 6)]
-    colors = [get_score_color(i) for i in range(1, 6)]
+    
+    # Monochromatic slate colors - minimal design
+    colors = ['#cbd5e1', '#cbd5e1', '#94a3b8', '#64748b', '#0f172a']
     
     fig = go.Figure(data=[
         go.Bar(
@@ -52,20 +54,22 @@ def create_distribution_bar(score_distribution: dict, height: int = 200) -> go.F
             y=counts,
             marker_color=colors,
             text=counts,
-            textposition='auto',
+            textposition='outside',
+            textfont=dict(size=11, color='#64748b')
         )
     ])
     
     fig.update_layout(
         title=None,
-        xaxis_title="Score",
-        yaxis_title="Count",
+        xaxis_title=None,
+        yaxis_title=None,
         height=height,
-        margin=dict(l=40, r=20, t=20, b=40),
+        margin=dict(l=20, r=20, t=10, b=30),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='#e5e7eb')
+        xaxis=dict(showgrid=False, showline=False),
+        yaxis=dict(showgrid=False, showline=False, showticklabels=False),
+        font=dict(size=11, color='#64748b')
     )
     
     return fig
@@ -167,143 +171,154 @@ def render_persona_summary_card(persona: dict, stats: dict, compact: bool = Fals
             "textAlign": "center"
         })
     else:
-        # Full version for detailed summary tab
+        # Full version for detailed summary tab - MINIMAL DESIGN
         return html.Div([
-            # Card header
+            # Minimal header with persona info
             html.Div([
-                html.Span(persona["emoji"], style={"fontSize": "32px", "marginRight": "12px"}),
+                html.Span(persona["emoji"], style={
+                    "fontSize": "20px",
+                    "marginRight": "10px"
+                }),
                 html.Div([
                     html.H3(persona["display_name"], style={
                         "margin": "0",
-                        "fontSize": "18px",
-                        "color": "#111827"
+                        "fontSize": "15px",
+                        "fontWeight": "500",
+                        "color": "#0f172a"
                     }),
                     html.P(persona["description"], style={
-                        "margin": "4px 0 0 0",
-                        "fontSize": "13px",
-                        "color": "#6b7280"
+                        "margin": "2px 0 0 0",
+                        "fontSize": "12px",
+                        "color": "#94a3b8"
                     })
                 ], style={"flex": "1"})
             ], style={
                 "display": "flex",
                 "alignItems": "center",
                 "marginBottom": "16px",
-                "paddingBottom": "16px",
-                "borderBottom": "2px solid #e5e7eb"
+                "paddingBottom": "12px",
+                "borderBottom": "1px solid #f1f5f9"
             }),
             
-            # Metrics row
+            # Compact metrics row
             html.Div([
                 # Average score
                 html.Div([
-                    html.Div("Average Score", style={
-                        "fontSize": "12px",
-                        "color": "#6b7280",
-                        "marginBottom": "4px"
+                    html.Div("Avg Score", style={
+                        "fontSize": "11px",
+                        "color": "#94a3b8",
+                        "marginBottom": "4px",
+                        "textTransform": "uppercase",
+                        "letterSpacing": "0.05em"
                     }),
-                    html.Div(f"{avg_score:.1f} / 5.0", style={
-                        "fontSize": "24px",
-                        "fontWeight": "700",
-                        "color": get_score_color(avg_score)
+                    html.Div(f"{avg_score:.1f}", style={
+                        "fontSize": "28px",
+                        "fontWeight": "500",
+                        "color": "#0f172a",
+                        "lineHeight": "1"
+                    }),
+                    html.Div("/ 5.0", style={
+                        "fontSize": "12px",
+                        "color": "#cbd5e1",
+                        "marginTop": "2px"
                     })
                 ], style={
                     "flex": "1",
-                    "padding": "12px",
-                    "backgroundColor": "#f9fafb",
-                    "borderRadius": "6px",
-                    "marginRight": "8px"
+                    "marginRight": "12px"
                 }),
                 
                 # Confidence
                 html.Div([
                     html.Div("Confidence", style={
-                        "fontSize": "12px",
-                        "color": "#6b7280",
-                        "marginBottom": "4px"
+                        "fontSize": "11px",
+                        "color": "#94a3b8",
+                        "marginBottom": "4px",
+                        "textTransform": "uppercase",
+                        "letterSpacing": "0.05em"
                     }),
                     html.Div(f"{avg_confidence*100:.0f}%", style={
-                        "fontSize": "24px",
-                        "fontWeight": "700",
-                        "color": "#3b82f6"
+                        "fontSize": "28px",
+                        "fontWeight": "500",
+                        "color": "#0f172a",
+                        "lineHeight": "1"
                     })
                 ], style={
-                    "flex": "1",
-                    "padding": "12px",
-                    "backgroundColor": "#f9fafb",
-                    "borderRadius": "6px"
+                    "flex": "1"
                 })
             ], style={
                 "display": "flex",
                 "marginBottom": "16px"
             }),
             
-            # Score distribution chart
+            # Compact score distribution chart
             html.Div([
-                html.H4("Score Distribution", style={
-                    "margin": "0 0 8px 0",
-                    "fontSize": "14px",
-                    "color": "#111827"
+                html.Div("Score Distribution", style={
+                    "fontSize": "11px",
+                    "color": "#94a3b8",
+                    "marginBottom": "8px",
+                    "textTransform": "uppercase",
+                    "letterSpacing": "0.05em"
                 }),
-                dcc.Graph(figure=create_distribution_bar(score_dist), config={'displayModeBar': False})
+                dcc.Graph(
+                    figure=create_distribution_bar(score_dist, height=120),
+                    config={'displayModeBar': False},
+                    style={"margin": "0 -12px"}
+                )
             ], style={"marginBottom": "16px"}),
             
-            # Top & Worst segments
+            # Minimal top & worst segments
             html.Div([
                 # Top segments
                 html.Div([
-                    html.H4("🏆 Top Segments", style={
-                        "margin": "0 0 8px 0",
-                        "fontSize": "14px",
-                        "color": "#10b981"
+                    html.Div("Top Segments", style={
+                        "fontSize": "11px",
+                        "color": "#94a3b8",
+                        "marginBottom": "6px",
+                        "textTransform": "uppercase",
+                        "letterSpacing": "0.05em"
                     }),
                     html.Div([
                         html.Span(f"#{seg}", style={
                             "display": "inline-block",
-                            "padding": "4px 8px",
+                            "padding": "3px 8px",
                             "marginRight": "4px",
                             "marginBottom": "4px",
-                            "backgroundColor": "#10b98120",
-                            "color": "#10b981",
-                            "borderRadius": "4px",
-                            "fontSize": "12px",
-                            "fontWeight": "600"
+                            "backgroundColor": "#f8fafc",
+                            "color": "#64748b",
+                            "fontSize": "11px",
+                            "fontWeight": "500",
+                            "border": "1px solid #f1f5f9"
                         }) for seg in top_segments
                     ])
                 ], style={
                     "flex": "1",
-                    "marginRight": "8px",
-                    "padding": "12px",
-                    "backgroundColor": "#f0fdf4",
-                    "borderRadius": "6px",
-                    "border": "1px solid #10b98140"
+                    "marginRight": "12px"
                 }),
                 
                 # Worst segments
                 html.Div([
-                    html.H4("⚠️ Worst Segments", style={
-                        "margin": "0 0 8px 0",
-                        "fontSize": "14px",
-                        "color": "#ef4444"
+                    html.Div("Worst Segments", style={
+                        "fontSize": "11px",
+                        "color": "#94a3b8",
+                        "marginBottom": "6px",
+                        "textTransform": "uppercase",
+                        "letterSpacing": "0.05em"
                     }),
                     html.Div([
                         html.Span(f"#{seg}", style={
                             "display": "inline-block",
-                            "padding": "4px 8px",
+                            "padding": "3px 8px",
                             "marginRight": "4px",
                             "marginBottom": "4px",
-                            "backgroundColor": "#ef444420",
-                            "color": "#ef4444",
-                            "borderRadius": "4px",
-                            "fontSize": "12px",
-                            "fontWeight": "600"
+                            "backgroundColor": "#f8fafc",
+                            "color": "#64748b",
+                            "fontSize": "11px",
+                            "fontWeight": "500",
+                            "border": "1px solid #f1f5f9"
                         }) for seg in worst_segments
                     ])
                 ], style={
-                    "flex": "1",
-                    "padding": "12px",
-                    "backgroundColor": "#fef2f2",
-                    "borderRadius": "6px",
-                    "border": "1px solid #ef444440"
+                    "flex": "1"
                 })
             ], style={
                 "display": "flex"
@@ -311,11 +326,11 @@ def render_persona_summary_card(persona: dict, stats: dict, compact: bool = Fals
             
         ], style={
             "backgroundColor": "#ffffff",
-            "borderRadius": "8px",
+            "borderRadius": "0",
             "padding": "20px",
-            "marginBottom": "16px",
-            "border": "1px solid #e5e7eb",
-            "boxShadow": "0 1px 3px rgba(0,0,0,0.1)"
+            "marginBottom": "12px",
+            "border": "1px solid #f1f5f9",
+            "boxShadow": "none"
         })
 
 
@@ -420,22 +435,33 @@ def render_detailed_summary(personas: list, summary_data: dict) -> html.Div:
             card = render_persona_summary_card(persona, stats, compact=False)
             persona_cards.append(card)
     
-    # Header with overview
+    # Minimal header with overview
     header = html.Div([
-        html.H2(f"📊 Summary for Audio: {audio_id[:16]}...", style={
-            "margin": "0 0 8px 0",
-            "fontSize": "24px",
-            "color": "#111827"
+        html.Div(f"Summary for Audio: {audio_id[:20]}...", style={
+            "margin": "0 0 4px 0",
+            "fontSize": "13px",
+            "color": "#94a3b8",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.05em"
         }),
-        html.P(f"Total Segments: {num_segments}", style={
+        html.Div(f"Total Segments: {num_segments}", style={
             "margin": "0",
-            "fontSize": "14px",
-            "color": "#6b7280"
+            "fontSize": "15px",
+            "fontWeight": "500",
+            "color": "#0f172a"
         })
     ], style={
         "marginBottom": "24px",
         "paddingBottom": "16px",
-        "borderBottom": "2px solid #e5e7eb"
+        "borderBottom": "1px solid #f1f5f9"
     })
     
-    return html.Div([header] + persona_cards)
+    # Use grid layout for better information density
+    return html.Div([
+        header,
+        html.Div(persona_cards, style={
+            "display": "grid",
+            "gridTemplateColumns": "repeat(auto-fit, minmax(400px, 1fr))",
+            "gap": "16px"
+        })
+    ])
