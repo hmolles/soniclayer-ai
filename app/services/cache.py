@@ -1,6 +1,9 @@
 import redis
+import os
 
-redis_conn = redis.Redis(host="localhost", port=6379, db=0)
+# Use port 6000 for Replit (6379 not available for workflows)
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6000))
+redis_conn = redis.Redis(host="localhost", port=REDIS_PORT, db=0)
 
 def get_cached_transcript(key: str) -> str | None:
     result = redis_conn.get(key)
