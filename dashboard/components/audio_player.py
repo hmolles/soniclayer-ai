@@ -7,6 +7,8 @@ def render_audio_player(audio_id: str):
             id="audio-player",
             url=f"http://localhost:8000/audio/{audio_id}",
             controls=True,
+            playing=False,
+            intervalCurrentTime=250,
             width="100%",
             height="50px",
             style={
