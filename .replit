@@ -40,7 +40,6 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "./run_redis.sh"
-waitForPort = 6000
 
 [[workflows.workflow]]
 name = "backend"
