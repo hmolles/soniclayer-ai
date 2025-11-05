@@ -479,11 +479,13 @@ app.clientside_callback(
     function(n_intervals) {
         const audioElement = document.getElementById('audio-player');
         
-        if (audioElement && audioElement.currentTime !== undefined) {
+        if (audioElement && audioElement.currentTime !== undefined && !isNaN(audioElement.currentTime)) {
+            console.log('[CLIENTSIDE] Current time:', audioElement.currentTime);
             return audioElement.currentTime;
         }
         
-        return 0;
+        console.log('[CLIENTSIDE] Audio element not ready or no time');
+        return window.dash_clientside.no_update;
     }
     """,
     Output('current-time-store', 'data'),
@@ -531,12 +533,16 @@ app.clientside_callback(
 def auto_update_playback(current_time, segments, waveform_data, user_clicked):
     import numpy as np
     
+    print(f"[PLAYBACK] current_time={current_time}, user_clicked={user_clicked}, has_segments={bool(segments)}, has_waveform={bool(waveform_data)}")
+    
     # If user just clicked, reset flag and don't update
     if user_clicked:
+        print("[PLAYBACK] User just clicked, skipping update")
         return dash.no_update, dash.no_update, False
     
     # Skip if no valid time or segments
     if current_time is None or current_time < 0 or not segments or not waveform_data:
+        print(f"[PLAYBACK] Skipping - invalid data")
         return dash.no_update, dash.no_update, False
     
     # Convert waveform data back to numpy arrays
@@ -549,14 +555,19 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked):
         None
     )
     
+    print(f"[PLAYBACK] Found segment: {active_segment['start'] if active_segment else 'None'}-{active_segment['end'] if active_segment else 'None'}")
+    
     # Update waveform with cursor
     fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time)
+    print(f"[PLAYBACK] Redrawing waveform with cursor at {current_time}s")
     
     # Update metadata
     if active_segment:
         metadata = render_metadata_panel(active_segment)
+        print(f"[PLAYBACK] Updating metadata for segment")
         return fig, metadata, False
     else:
+        print(f"[PLAYBACK] No active segment, updating waveform only")
         return fig, dash.no_update, False
 
 # Callback 2: Handle waveform clicks for seeking
@@ -596,6 +607,7 @@ def handle_waveform_click(click_data, segments):
     prevent_initial_call='initial_duplicate'
 )
 def initialize_metadata(segments):
+    print(f"[INIT] Initializing metadata with {len(segments) if segments else 0} segments")
     if segments and len(segments) > 0:
         return render_metadata_panel(segments[0])
     else:
