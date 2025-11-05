@@ -114,6 +114,7 @@ app.layout = html.Div([
     # Hidden components for state management
     dcc.Interval(id="playback-sync", interval=500, n_intervals=0),
     dcc.Store(id="user-clicked", data=False),
+    dcc.Store(id='current-time-store', data=0),
     
 ], style={
     "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
