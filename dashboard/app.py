@@ -181,4 +181,6 @@ if __name__ == "__main__":
     print(f"🎵 Audio: {audio_id}")
     print(f"📈 Segments loaded: {len(segments)}")
     print(f"\nPress Ctrl+C to stop\n")
-    app.run(debug=True, host='0.0.0.0', port=8050)
+    import os
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)

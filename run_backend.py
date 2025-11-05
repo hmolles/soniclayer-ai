@@ -6,11 +6,13 @@ Runs the FastAPI backend on port 5000 for Replit webview.
 import uvicorn
 
 if __name__ == "__main__":
-    # Start FastAPI on port 5000 (Replit webview requirement)
+    import os
+    # Start FastAPI on port 8000 (Dash frontend uses port 5000)
+    port = int(os.getenv("BACKEND_PORT", 8000))
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=5000,
+        port=port,
         log_level="info",
         reload=False  # Disable reload in production
     )

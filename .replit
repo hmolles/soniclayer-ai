@@ -20,7 +20,11 @@ args = "redis"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "web"
+args = "backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "dashboard"
 
 [[workflows.workflow]]
 name = "redis"
@@ -35,12 +39,24 @@ args = "./run_redis.sh"
 waitForPort = 6000
 
 [[workflows.workflow]]
-name = "web"
+name = "backend"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python run_backend.py"
+args = "BACKEND_PORT=8000 python run_backend.py"
+waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "dashboard"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=5000 python dashboard/app.py 046af9aa3662f5bbba25357dec104cd6dd40d3f6757642b9c1725eb9b76e3b54"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -51,12 +67,16 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 6000
-externalPort = 6000
+localPort = 8000
+externalPort = 8000
 
 [[ports]]
-localPort = 6379
-externalPort = 3000
+localPort = 8050
+externalPort = 3002
+
+[[ports]]
+localPort = 34807
+externalPort = 3001
 
 [deployment]
 deploymentTarget = "autoscale"
