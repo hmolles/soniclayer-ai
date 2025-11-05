@@ -206,44 +206,11 @@ def render_admin_page():
                     "fontSize": "18px"
                 }),
                 
-                html.Div([
-                    html.Div([
-                        html.Div([
-                            html.Span(persona['emoji'], style={
-                                "fontSize": "24px",
-                                "marginRight": "12px"
-                            }),
-                            html.Div([
-                                html.Strong(persona['display_name'], style={
-                                    "fontSize": "16px",
-                                    "color": "#111827",
-                                    "display": "block"
-                                }),
-                                html.Span(f"ID: {persona['id']}", style={
-                                    "fontSize": "12px",
-                                    "color": "#6b7280",
-                                    "display": "block",
-                                    "marginTop": "2px"
-                                }),
-                                html.Span(persona.get('description', ''), style={
-                                    "fontSize": "13px",
-                                    "color": "#6b7280",
-                                    "display": "block",
-                                    "marginTop": "4px"
-                                })
-                            ])
-                        ], style={
-                            "display": "flex",
-                            "alignItems": "flex-start"
-                        })
-                    ], style={
-                        "padding": "16px",
-                        "backgroundColor": "#f9fafb",
-                        "border": "1px solid #e5e7eb",
-                        "borderRadius": "6px",
-                        "marginBottom": "12px"
-                    }) for persona in personas
-                ], id="personas-list")
+                # Store to track which persona is being edited
+                dcc.Store(id="editing-persona-id", data=None),
+                
+                # Container for persona cards (will be updated by callback)
+                html.Div(id="personas-list")
             ], style={
                 "width": "350px",
                 "backgroundColor": "#ffffff",

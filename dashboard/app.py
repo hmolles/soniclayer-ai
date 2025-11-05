@@ -1,4 +1,4 @@
-from dash import Dash, Input, Output, State, dcc, html, dash, ALL, callback_context
+from dash import Dash, Input, Output, State, dcc, html, dash, ALL, callback_context, MATCH
 from dash.exceptions import PreventUpdate
 import sys
 import json
@@ -10,6 +10,11 @@ from components.admin_page import render_admin_page
 from services.audio_utils import extract_waveform
 from services.api_client import fetch_segments
 from utils.audio_scanner import get_all_audio_files
+from personas_config import get_all_personas
+
+# Import persona prompts from langflow_client for editing
+sys.path.insert(0, str(Path(__file__).parent.parent / "app"))
+from services.langflow_client import PERSONA_PROMPTS
 
 # Get default audio_id from command line (for backwards compatibility)
 default_audio_id = sys.argv[1] if len(sys.argv) > 1 else None
@@ -290,6 +295,213 @@ def toggle_admin_modal(open_clicks, close_clicks):
         return {"display": "block"}
     else:
         return {"display": "none"}
+
+
+# Callback 6: Render and update persona cards with edit capability
+@app.callback(
+    Output('personas-list', 'children'),
+    Input('editing-persona-id', 'data'),
+    prevent_initial_call=False  # Render on initial load
+)
+def render_persona_cards(editing_id):
+    """Render persona cards, expanding the one being edited."""
+    personas = get_all_personas()
+    cards = []
+    
+    for persona in personas:
+        persona_id = persona['id']
+        is_editing = (editing_id == persona_id)
+        
+        # Map persona ID to chain name (e.g., "genz" -> "genz_chain")
+        chain_name = f"{persona_id}_chain"
+        
+        if is_editing:
+            # EXPANDED: Show edit form
+            # Load current prompts from langflow_client.py
+            current_prompts = PERSONA_PROMPTS.get(chain_name, {
+                "system": "",
+                "user_template": ""
+            })
+            
+            card = html.Div([
+                # Header with persona info
+                html.Div([
+                    html.Span(persona['emoji'], style={
+                        "fontSize": "24px",
+                        "marginRight": "12px"
+                    }),
+                    html.Strong(f"Editing: {persona['display_name']}", style={
+                        "fontSize": "16px",
+                        "color": "#3b82f6"
+                    })
+                ], style={
+                    "display": "flex",
+                    "alignItems": "center",
+                    "marginBottom": "16px",
+                    "paddingBottom": "12px",
+                    "borderBottom": "2px solid #e5e7eb"
+                }),
+                
+                # Edit form fields
+                html.Div([
+                    # Display Name
+                    html.Label("Display Name:", style={"fontWeight": "500", "fontSize": "13px", "marginBottom": "4px", "display": "block"}),
+                    dcc.Input(
+                        id={'type': 'edit-name', 'id': persona_id},
+                        value=persona['display_name'],
+                        style={"width": "100%", "padding": "8px", "marginBottom": "12px", "border": "1px solid #d1d5db", "borderRadius": "4px"}
+                    ),
+                    
+                    # Emoji
+                    html.Label("Emoji:", style={"fontWeight": "500", "fontSize": "13px", "marginBottom": "4px", "display": "block"}),
+                    dcc.Input(
+                        id={'type': 'edit-emoji', 'id': persona_id},
+                        value=persona['emoji'],
+                        maxLength=2,
+                        style={"width": "100%", "padding": "8px", "marginBottom": "12px", "border": "1px solid #d1d5db", "borderRadius": "4px"}
+                    ),
+                    
+                    # Description
+                    html.Label("Description:", style={"fontWeight": "500", "fontSize": "13px", "marginBottom": "4px", "display": "block"}),
+                    dcc.Input(
+                        id={'type': 'edit-description', 'id': persona_id},
+                        value=persona.get('description', ''),
+                        style={"width": "100%", "padding": "8px", "marginBottom": "12px", "border": "1px solid #d1d5db", "borderRadius": "4px"}
+                    ),
+                    
+                    # System Prompt
+                    html.Label("System Prompt:", style={"fontWeight": "500", "fontSize": "13px", "marginBottom": "4px", "display": "block"}),
+                    dcc.Textarea(
+                        id={'type': 'edit-system-prompt', 'id': persona_id},
+                        value=current_prompts.get('system', ''),
+                        style={"width": "100%", "height": "120px", "padding": "8px", "marginBottom": "12px", "border": "1px solid #d1d5db", "borderRadius": "4px", "fontFamily": "monospace", "fontSize": "12px"}
+                    ),
+                    
+                    # User Template Prompt
+                    html.Label("User Template:", style={"fontWeight": "500", "fontSize": "13px", "marginBottom": "4px", "display": "block"}),
+                    dcc.Textarea(
+                        id={'type': 'edit-user-template', 'id': persona_id},
+                        value=current_prompts.get('user_template', ''),
+                        style={"width": "100%", "height": "120px", "padding": "8px", "marginBottom": "16px", "border": "1px solid #d1d5db", "borderRadius": "4px", "fontFamily": "monospace", "fontSize": "12px"}
+                    ),
+                    
+                    # Action buttons
+                    html.Div([
+                        html.Button(
+                            "💾 Save Changes",
+                            id={'type': 'save-persona-btn', 'id': persona_id},
+                            n_clicks=0,
+                            style={"padding": "10px 16px", "backgroundColor": "#3b82f6", "color": "white", "border": "none", "borderRadius": "4px", "cursor": "pointer", "marginRight": "8px", "fontWeight": "500"}
+                        ),
+                        html.Button(
+                            "✕ Cancel",
+                            id={'type': 'cancel-edit-btn', 'id': persona_id},
+                            n_clicks=0,
+                            style={"padding": "10px 16px", "backgroundColor": "#6b7280", "color": "white", "border": "none", "borderRadius": "4px", "cursor": "pointer", "fontWeight": "500"}
+                        )
+                    ])
+                ])
+            ], style={
+                "padding": "16px",
+                "backgroundColor": "#eff6ff",
+                "border": "2px solid #3b82f6",
+                "borderRadius": "6px",
+                "marginBottom": "12px"
+            })
+        else:
+            # COLLAPSED: Show compact view with Edit button
+            card = html.Div([
+                html.Div([
+                    html.Div([
+                        html.Span(persona['emoji'], style={
+                            "fontSize": "24px",
+                            "marginRight": "12px"
+                        }),
+                        html.Div([
+                            html.Strong(persona['display_name'], style={
+                                "fontSize": "16px",
+                                "color": "#111827",
+                                "display": "block"
+                            }),
+                            html.Span(f"ID: {persona_id}", style={
+                                "fontSize": "12px",
+                                "color": "#6b7280",
+                                "display": "block",
+                                "marginTop": "2px"
+                            }),
+                            html.Span(persona.get('description', ''), style={
+                                "fontSize": "13px",
+                                "color": "#6b7280",
+                                "display": "block",
+                                "marginTop": "4px"
+                            })
+                        ], style={"flex": "1"})
+                    ], style={
+                        "display": "flex",
+                        "alignItems": "flex-start",
+                        "marginBottom": "12px"
+                    }),
+                    
+                    # Edit button
+                    html.Button(
+                        "✏️ Edit",
+                        id={'type': 'edit-persona-btn', 'id': persona_id},
+                        n_clicks=0,
+                        style={
+                            "width": "100%",
+                            "padding": "8px",
+                            "backgroundColor": "#ffffff",
+                            "color": "#3b82f6",
+                            "border": "1px solid #3b82f6",
+                            "borderRadius": "4px",
+                            "cursor": "pointer",
+                            "fontSize": "13px",
+                            "fontWeight": "500"
+                        }
+                    )
+                ])
+            ], style={
+                "padding": "16px",
+                "backgroundColor": "#f9fafb",
+                "border": "1px solid #e5e7eb",
+                "borderRadius": "6px",
+                "marginBottom": "12px"
+            })
+        
+        cards.append(card)
+    
+    return cards
+
+
+# Callback 7: Handle Edit button clicks to expand persona card
+@app.callback(
+    Output('editing-persona-id', 'data'),
+    Input({'type': 'edit-persona-btn', 'id': ALL}, 'n_clicks'),
+    Input({'type': 'cancel-edit-btn', 'id': ALL}, 'n_clicks'),
+    prevent_initial_call=True
+)
+def handle_edit_buttons(edit_clicks, cancel_clicks):
+    """Handle Edit and Cancel button clicks."""
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    triggered_id = ctx.triggered[0]['prop_id']
+    
+    # Extract the button type and persona ID from the triggered component
+    if 'edit-persona-btn' in triggered_id:
+        # Parse the ID from the pattern-matching callback
+        import json as json_module
+        id_str = triggered_id.split('.')[0]
+        id_dict = json_module.loads(id_str)
+        persona_id = id_dict['id']
+        print(f"[EDIT] Opening edit mode for persona: {persona_id}")
+        return persona_id
+    elif 'cancel-edit-btn' in triggered_id:
+        print("[EDIT] Canceling edit mode")
+        return None
+    
+    raise PreventUpdate
 
 
 # Callback 1b: Update selected audio store when file button clicked
