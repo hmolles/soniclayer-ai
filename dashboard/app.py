@@ -1,4 +1,4 @@
-from dash import Dash, Input, Output, State, dcc, html, dash
+from dash import Dash, Input, Output, State, dcc, html, dash, ALL, callback_context
 import sys
 import json
 from pathlib import Path
@@ -273,7 +273,7 @@ app.layout = html.Div([
     prevent_initial_call=True
 )
 def toggle_admin_modal(open_clicks, close_clicks):
-    ctx = dash.callback_context
+    ctx = callback_context
     if not ctx.triggered:
         return {"display": "none"}
     
@@ -291,17 +291,17 @@ def toggle_admin_modal(open_clicks, close_clicks):
     Output('segments-store', 'data'),
     Output('waveform-data-store', 'data'),
     Output('audio-player-container', 'children'),
-    Output('waveform-graph', 'figure'),
+    Output('waveform-graph', 'figure', allow_duplicate=True),
     Output('dashboard-audio-id-display', 'children'),
-    Output('segment-metadata', 'children'),
-    Input({'type': 'file-item', 'audio_id': dash.ALL}, 'n_clicks'),
+    Output('segment-metadata', 'children', allow_duplicate=True),
+    Input({'type': 'file-item', 'audio_id': ALL}, 'n_clicks'),
     State('current-audio-id', 'data'),
-    prevent_initial_call=False
+    prevent_initial_call='initial_duplicate'
 )
 def load_audio_file(n_clicks_list, current_audio_id):
     import numpy as np
     
-    ctx = dash.callback_context
+    ctx = callback_context
     
     # Determine which audio to load
     audio_id = None
@@ -659,7 +659,7 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked):
         return fig, dash.no_update, False
 
 
-# Callback 5: Handle waveform clicks for seeking
+# Callback 5: Handle waveform clicks for seeking (note: clientside callback handles audio seeking)
 @app.callback(
     Output("segment-metadata", "children", allow_duplicate=True),
     Output("user-clicked", "data", allow_duplicate=True),
@@ -695,4 +695,4 @@ if __name__ == "__main__":
     print(f"📊 Dashboard available at: http://0.0.0.0:5000")
     print("Press Ctrl+C to stop\n")
     
-    app.run_server(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
