@@ -40,6 +40,7 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "./run_redis.sh"
+waitForPort = 6000
 
 [[workflows.workflow]]
 name = "backend"
@@ -93,8 +94,8 @@ localPort = 8000
 externalPort = 8000
 
 [[ports]]
-localPort = 8050
-externalPort = 3002
+localPort = 45443
+externalPort = 3001
 
 [deployment]
 deploymentTarget = "autoscale"
