@@ -206,22 +206,6 @@ app.layout = html.Div([
                     "fontSize": "14px",
                     "fontWeight": "500",
                     "color": "#0f172a",  # slate-900
-                    "marginRight": "12px"
-                }),
-                html.Span("·", style={
-                    "fontSize": "14px",
-                    "color": "#cbd5e1",  # slate-300
-                    "marginRight": "12px"
-                }),
-                html.Span(id="dashboard-audio-id-display", children="Select a file", style={
-                    "fontSize": "13px",
-                    "color": "#94a3b8",  # slate-400
-                    "fontWeight": "400",
-                    "maxWidth": "300px",
-                    "overflow": "hidden",
-                    "textOverflow": "ellipsis",
-                    "whiteSpace": "nowrap",
-                    "display": "inline-block"
                 })
             ], style={
                 "display": "flex",
@@ -279,24 +263,37 @@ app.layout = html.Div([
                 },
                 children=[
                 html.Div([
-                    # Left column - Waveform and audio player
+                    # Left column - Waveform, audio player, and summary
                     html.Div([
-                        # Collapsible summary panel (Phase 3)
-                        html.Div(id="summary-panel-container", children=html.Div(
-                            "Loading summary...",
-                            style={"padding": "20px", "color": "#94a3b8", "fontStyle": "normal", "fontSize": "13px"}
-                        )),
-                        
-                        html.Div(id="audio-player-container", children=html.Div(
-                            "Select an audio file to begin",
-                            style={"padding": "32px 20px", "color": "#94a3b8", "textAlign": "center", "fontSize": "13px"}
-                        )),
+                        # Waveform at top
                         dcc.Graph(
                             id="waveform-graph",
                             figure={},
                             style={"height": "400px"},
                             config={'displayModeBar': False}
                         ),
+                        
+                        # Audio player controls below waveform
+                        html.Div(id="audio-player-container", children=html.Div([
+                            html.Audio(
+                                id="audio-player",
+                                src="",
+                                controls=True,
+                                style={
+                                    'width': '100%',
+                                    'outline': 'none'
+                                }
+                            )
+                        ], style={
+                            'marginBottom': '20px',
+                            'marginTop': '10px'
+                        })),
+                        
+                        # Collapsible summary panel at bottom
+                        html.Div(id="summary-panel-container", children=html.Div(
+                            "Loading summary...",
+                            style={"padding": "20px", "color": "#94a3b8", "fontStyle": "normal", "fontSize": "13px"}
+                        )),
                     ], style={
                         "flex": "1",
                         "marginRight": "20px",
@@ -366,7 +363,7 @@ app.layout = html.Div([
         ]),
         
         # Hidden components for state management
-        dcc.Interval(id="playback-sync", interval=250, n_intervals=0),  # 250ms for smooth tracking
+        dcc.Interval(id="playback-sync", interval=1000, n_intervals=0),  # Update every second
         dcc.Store(id="user-clicked", data=False),
         dcc.Store(id='current-time-store', data=0),
         dcc.Store(id='current-audio-id', data=default_audio_id),
@@ -1057,7 +1054,6 @@ def update_selected_audio(*n_clicks_list):
     Output('waveform-data-store', 'data'),
     Output('audio-player-container', 'children'),
     Output('waveform-graph', 'figure', allow_duplicate=True),
-    Output('dashboard-audio-id-display', 'children'),
     Output('segment-metadata', 'children', allow_duplicate=True),
     Input('selected-audio-store', 'data'),
     prevent_initial_call='initial_duplicate'
@@ -1079,7 +1075,6 @@ def load_audio_file(audio_id):
             {'time': [], 'amplitude': [], 'amp_min': 0, 'amp_max': 0},
             html.Div("Select an audio file to begin", style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}),
             {},
-            "Select a file",
             html.Div("Select an audio file to view analysis", style={"padding": "20px", "color": "#6b7280"})
         )
     
@@ -1105,12 +1100,8 @@ def load_audio_file(audio_id):
     # Create audio player
     player = render_audio_player(audio_id)
     
-    # Create initial waveform
-    fig = render_waveform_with_highlight(time, amplitude, segments, amp_min=amp_min, amp_max=amp_max)
-    
-    # Display text - cleaner format for minimal header
-    # Truncate to 12 chars for compact display
-    display_text = f"{audio_id[:12]}..." if len(audio_id) > 12 else audio_id
+    # Create initial waveform with audio_id as title
+    fig = render_waveform_with_highlight(time, amplitude, segments, amp_min=amp_min, amp_max=amp_max, audio_id=audio_id)
     
     # Initial metadata (first segment)
     if segments and len(segments) > 0:
@@ -1129,7 +1120,6 @@ def load_audio_file(audio_id):
         },
         player,
         fig,
-        display_text,
         metadata
     )
 
@@ -1334,10 +1324,12 @@ def process_transcript(audio_id, transcript_segments, classifier_results):
 app.clientside_callback(
     """
     function(n_intervals) {
-        var audioElement = document.getElementById('audio-player');
-        if (audioElement && !isNaN(audioElement.currentTime)) {
+        const audioElement = document.getElementById('audio-player');
+        
+        if (audioElement && audioElement.currentTime !== undefined && !isNaN(audioElement.currentTime)) {
             return audioElement.currentTime;
         }
+        
         return window.dash_clientside.no_update;
     }
     """,
@@ -1351,15 +1343,20 @@ app.clientside_callback(
 app.clientside_callback(
     """
     function(click_data) {
-        if (!click_data) return window.dash_clientside.no_update;
-        var audioElement = document.getElementById('audio-player');
-        if (audioElement) {
-            audioElement.currentTime = click_data.points[0].x;
+        if (!click_data) {
+            return window.dash_clientside.no_update;
         }
-        return window.dash_clientside.no_update;
+        
+        const clicked_time = click_data.points[0].x;
+        const audioElement = document.getElementById('audio-player');
+        if (audioElement) {
+            audioElement.currentTime = clicked_time;
+        }
+        
+        return true;
     }
     """,
-    Output('waveform-click-dummy', 'data', allow_duplicate=True),
+    Output('user-clicked', 'data', allow_duplicate=True),
     Input('waveform-graph', 'clickData'),
     prevent_initial_call=True
 )
@@ -1374,9 +1371,10 @@ app.clientside_callback(
     State("segments-store", "data"),
     State("waveform-data-store", "data"),
     State("user-clicked", "data"),
+    State("current-audio-id", "data"),
     prevent_initial_call=True
 )
-def auto_update_playback(current_time, segments, waveform_data, user_clicked):
+def auto_update_playback(current_time, segments, waveform_data, user_clicked, audio_id):
     import numpy as np
     
     print(f"[AUTO_UPDATE] time={current_time}, user_clicked={user_clicked}, has_segments={bool(segments)}, has_waveform={bool(waveform_data)}")
@@ -1424,8 +1422,8 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked):
     if active_segment:
         print(f"[AUTO_UPDATE] Active segment: {active_segment.get('start')}-{active_segment.get('end')}")
     
-    # Update waveform with cursor (pass cached min/max for performance)
-    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time, amp_min=amp_min, amp_max=amp_max)
+    # Update waveform with cursor (pass cached min/max for performance and audio_id for title)
+    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time, amp_min=amp_min, amp_max=amp_max, audio_id=audio_id)
     
     # Update metadata
     if active_segment:
@@ -1433,37 +1431,6 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked):
         return fig, metadata, False
     else:
         return fig, dash.no_update, False
-
-
-# Callback 5: Handle waveform clicks for seeking (note: clientside callback handles audio seeking)
-@app.callback(
-    Output("segment-metadata", "children", allow_duplicate=True),
-    Output("user-clicked", "data", allow_duplicate=True),
-    Input("waveform-graph", "clickData"),
-    State("segments-store", "data"),
-    prevent_initial_call=True
-)
-def handle_waveform_click(click_data, segments):
-    if click_data is None or not segments:
-        return dash.no_update, dash.no_update
-    
-    # Get clicked time from waveform
-    clicked_time = click_data['points'][0]['x']
-    
-    # Find the segment containing this time
-    active_segment = next(
-        (seg for seg in segments if seg["start"] <= clicked_time <= seg["end"]),
-        None
-    )
-    
-    # Update metadata
-    metadata = render_metadata_panel(active_segment) if active_segment else html.Div(
-        "No segment at this time position.",
-        style={"padding": "20px", "color": "#6b7280"}
-    )
-    
-    # Set user-clicked flag
-    return metadata, True
 
 
 # ============================================================================
