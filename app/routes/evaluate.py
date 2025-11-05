@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
@@ -29,6 +30,7 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 async def evaluate_audio(file: UploadFile):
     """
     Upload audio file, transcribe, classify, and queue persona evaluation tasks.
+    Handles large files (>25MB) via compression and chunking.
     
     Returns:
         - audio_id: Unique hash identifier for the audio
@@ -67,22 +69,42 @@ async def evaluate_audio(file: UploadFile):
         with open(audio_path, "wb") as f:
             f.write(audio_bytes)
         
-        logger.info(f"Audio saved: {audio_path} ({len(audio_bytes)} bytes)")
+        file_size_mb = len(audio_bytes) / (1024 * 1024)
+        logger.info(f"Audio saved: {audio_path} ({file_size_mb:.2f} MB)")
         
-        # Step 1: Transcribe audio using Whisper with accurate timestamps
+        # Step 1: Process and transcribe audio (handles large files via chunking)
         try:
-            transcript_segments = transcribe_audio_with_timestamps(audio_bytes, segment_duration=15.0)
-            logger.info(f"Transcription complete: {len(transcript_segments)} segments with timestamps")
+            # Process audio file (compress/chunk if needed)
+            chunks = process_large_audio(audio_bytes, audio_id)
+            logger.info(f"Audio processing complete: {len(chunks)} chunk(s) to transcribe")
+            
+            try:
+                # Transcribe chunks with rate limiting and timestamp stitching
+                if len(chunks) == 1:
+                    # Single chunk - read compressed audio and use standard transcription
+                    logger.info("Single chunk, using standard transcription with compressed audio")
+                    with open(chunks[0].file_path, "rb") as f:
+                        compressed_audio = f.read()
+                    transcript_segments = transcribe_audio_with_timestamps(compressed_audio, segment_duration=15.0)
+                else:
+                    # Multiple chunks - use chunked transcription
+                    logger.info(f"Multiple chunks ({len(chunks)}), using chunked transcription with rate limiting")
+                    transcript_segments = transcribe_chunked_audio(chunks)
+                
+                logger.info(f"Transcription complete: {len(transcript_segments)} segments with timestamps")
+            finally:
+                # Clean up temporary chunk files
+                for chunk in chunks:
+                    chunk_dir = os.path.dirname(chunk.file_path)
+                    if chunk_dir and os.path.exists(chunk_dir) and "audio_processing_" in chunk_dir:
+                        shutil.rmtree(chunk_dir, ignore_errors=True)
+                        logger.debug(f"Cleaned up temp directory: {chunk_dir}")
         except Exception as e:
             logger.error(f"Transcription failed: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Transcription failed: {str(e)}"
             )
-        
-        # Note: transcript_segments now already has start, end, and text from Whisper
-        # No need for manual segmentation
-        logger.info(f"Created {len(transcript_segments)} segments with accurate timestamps")
         
         # Step 2: Classify each segment (topic and tone)
         classifier_results = []
@@ -111,7 +133,7 @@ async def evaluate_audio(file: UploadFile):
                     "error": str(e)
                 })
         
-        # Step 4: Store transcript segments and classifier output in Redis
+        # Step 3: Store transcript segments and classifier output in Redis
         redis_conn.set(
             f"transcript_segments:{audio_id}",
             json.dumps(transcript_segments),
@@ -126,7 +148,7 @@ async def evaluate_audio(file: UploadFile):
         
         logger.info(f"Stored transcript and classification in Redis for {audio_id}")
         
-        # Step 5: Queue persona evaluation workers (GenZ and Advertiser for MVP)
+        # Step 4: Queue persona evaluation workers (GenZ and Advertiser for MVP)
         job_ids = {}
         
         try:
@@ -159,7 +181,7 @@ async def evaluate_audio(file: UploadFile):
             logger.error(f"Failed to queue Advertiser worker: {e}")
             job_ids["advertiser"] = f"error: {str(e)}"
         
-        # Step 6: Return response with audio_id and job tracking info
+        # Step 5: Return response with audio_id and job tracking info
         total_transcript_length = sum(len(seg["text"]) for seg in transcript_segments)
         return JSONResponse({
             "audio_id": audio_id,

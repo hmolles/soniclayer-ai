@@ -16,23 +16,11 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "web"
+args = "redis"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "redis"
-
-[[workflows.workflow]]
-name = "web"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python run_backend.py"
-waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
+args = "web"
 
 [[workflows.workflow]]
 name = "redis"
@@ -46,13 +34,21 @@ task = "shell.exec"
 args = "./run_redis.sh"
 waitForPort = 6000
 
+[[workflows.workflow]]
+name = "web"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python run_backend.py"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 6000
-externalPort = 6000
 
 [[ports]]
 localPort = 6379
