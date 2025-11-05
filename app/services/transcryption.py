@@ -7,6 +7,7 @@ from openai import AzureOpenAI
 AZURE_WHISPER_ENDPOINT = "https://admin-mhlf1bll-swedencentral.cognitiveservices.azure.com/openai/deployments/whisper/audio/translations"
 AZURE_WHISPER_KEY = os.getenv("AZURE_WHISPER_KEY")
 AZURE_WHISPER_API_VERSION = "2024-06-01"
+AZURE_WHISPER_DEPLOYMENT_NAME = "whisper"  # Deployment name from endpoint
 
 # Rate limiting: 3 requests per minute
 RATE_LIMIT_REQUESTS = 3
@@ -49,7 +50,7 @@ def transcribe_audio(file_bytes: bytes) -> str:
         
         with open(tmp_path, "rb") as audio_file:
             result = client.audio.transcriptions.create(
-                model="whisper",
+                model=AZURE_WHISPER_DEPLOYMENT_NAME,
                 file=audio_file
             )
         
@@ -78,7 +79,7 @@ def transcribe_audio_with_timestamps(file_bytes: bytes, segment_duration: float 
         
         with open(tmp_path, "rb") as audio_file:
             result = client.audio.transcriptions.create(
-                model="whisper",
+                model=AZURE_WHISPER_DEPLOYMENT_NAME,
                 file=audio_file,
                 response_format="verbose_json",
                 timestamp_granularities=["segment"]
