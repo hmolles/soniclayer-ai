@@ -26,7 +26,7 @@ else:
     print("No default audio - use file browser to select")
 
 # Initialize Dash app
-app = Dash(__name__, assets_folder='assets')
+app = Dash(__name__, assets_folder='assets', suppress_callback_exceptions=True)
 
 # Add audio proxy endpoint to serve audio through port 5000
 @app.server.route('/audio/<audio_id>')
@@ -716,9 +716,26 @@ def get_all_personas():
         langflow_path.write_text(new_langflow_content)
         print(f"[SAVE] Updated langflow_client.py")
         
-        # Success! Close the edit mode and show success message
+        # Success! Close the edit mode and show success message with re-evaluate button
         print(f"[SAVE] ✅ Successfully saved persona: {persona_id}")
-        success_toast = html.Div(f"✅ Saved {new_name} successfully!", style={
+        success_toast = html.Div([
+            html.Span(f"✅ Saved {new_name} successfully!  ", style={"marginRight": "12px"}),
+            html.Button(
+                "🔄 Re-evaluate Audio",
+                id="re-evaluate-btn",
+                n_clicks=0,
+                style={
+                    "padding": "6px 12px",
+                    "backgroundColor": "#ffffff",
+                    "color": "#10b981",
+                    "border": "1px solid #10b981",
+                    "borderRadius": "4px",
+                    "cursor": "pointer",
+                    "fontSize": "12px",
+                    "fontWeight": "500"
+                }
+            )
+        ], style={
             "position": "fixed",
             "top": "20px",
             "right": "20px",
@@ -730,7 +747,8 @@ def get_all_personas():
             "fontWeight": "500",
             "boxShadow": "0 4px 6px rgba(0,0,0,0.1)",
             "zIndex": "10000",
-            "display": "block"
+            "display": "flex",
+            "alignItems": "center"
         })
         return None, success_toast, {"display": "block"}  # Close form + show toast
         
@@ -753,6 +771,100 @@ def get_all_personas():
             "display": "block"
         })
         return dash.no_update, error_toast, {"display": "block"}
+
+
+# Callback 9: Handle re-evaluation button click
+@app.callback(
+    Output('save-toast', 'children', allow_duplicate=True),
+    Output('save-toast', 'style', allow_duplicate=True),
+    Output('segments-store', 'data', allow_duplicate=True),
+    Input('re-evaluate-btn', 'n_clicks'),
+    State('current-audio-id', 'data'),
+    prevent_initial_call=True
+)
+def trigger_re_evaluation(n_clicks, audio_id):
+    """Trigger re-evaluation of current audio file with all personas."""
+    import requests
+    import time
+    
+    if not n_clicks or not audio_id:
+        raise PreventUpdate
+    
+    print(f"[RE-EVAL] Triggering re-evaluation for audio: {audio_id}")
+    
+    try:
+        # Show loading toast
+        loading_toast = html.Div("🔄 Re-evaluating audio with updated persona settings...", style={
+            "position": "fixed",
+            "top": "20px",
+            "right": "20px",
+            "backgroundColor": "#3b82f6",
+            "color": "white",
+            "padding": "12px 20px",
+            "borderRadius": "6px",
+            "fontSize": "14px",
+            "fontWeight": "500",
+            "boxShadow": "0 4px 6px rgba(0,0,0,0.1)",
+            "zIndex": "10000",
+            "display": "block"
+        })
+        
+        # Call backend re-evaluation endpoint
+        response = requests.post(f"http://localhost:8000/re-evaluate/{audio_id}")
+        response.raise_for_status()
+        
+        result = response.json()
+        print(f"[RE-EVAL] API Response: {result.get('message')}")
+        print(f"[RE-EVAL] Queued {result.get('personas_queued')} persona(s)")
+        
+        # Wait a few seconds for processing (simple polling approach)
+        time.sleep(8)
+        
+        # Fetch updated segments
+        segments_response = requests.get(f"http://localhost:8000/segments/{audio_id}")
+        segments_response.raise_for_status()
+        updated_segments = segments_response.json()
+        
+        print(f"[RE-EVAL] ✅ Re-evaluation complete, loaded {len(updated_segments)} segments")
+        
+        # Show success toast
+        success_toast = html.Div("✅ Re-evaluation complete! Dashboard updated with new results.", style={
+            "position": "fixed",
+            "top": "20px",
+            "right": "20px",
+            "backgroundColor": "#10b981",
+            "color": "white",
+            "padding": "12px 20px",
+            "borderRadius": "6px",
+            "fontSize": "14px",
+            "fontWeight": "500",
+            "boxShadow": "0 4px 6px rgba(0,0,0,0.1)",
+            "zIndex": "10000",
+            "display": "block"
+        })
+        
+        return success_toast, {"display": "block"}, updated_segments
+        
+    except Exception as e:
+        print(f"[RE-EVAL] ❌ Error during re-evaluation: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        error_toast = html.Div(f"❌ Re-evaluation failed: {str(e)}", style={
+            "position": "fixed",
+            "top": "20px",
+            "right": "20px",
+            "backgroundColor": "#ef4444",
+            "color": "white",
+            "padding": "12px 20px",
+            "borderRadius": "6px",
+            "fontSize": "14px",
+            "fontWeight": "500",
+            "boxShadow": "0 4px 6px rgba(0,0,0,0.1)",
+            "zIndex": "10000",
+            "display": "block"
+        })
+        return error_toast, {"display": "block"}, dash.no_update
 
 
 # Callback 1b: Update selected audio store when file button clicked

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import evaluate, segments, audio
+from app.routes import evaluate, segments, audio, re_evaluate
 
 app = FastAPI(title="SonicLayer AI Backend")
 
@@ -16,3 +16,4 @@ app.add_middleware(
 app.include_router(evaluate.router)
 app.include_router(segments.router)
 app.include_router(audio.router)
+app.include_router(re_evaluate.router)

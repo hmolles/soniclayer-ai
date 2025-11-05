@@ -209,6 +209,9 @@ def render_admin_page():
                 # Store to track which persona is being edited
                 dcc.Store(id="editing-persona-id", data=None),
                 
+                # Store to track re-evaluation state
+                dcc.Store(id="re-evaluate-status", data=None),
+                
                 # Toast notification for save feedback
                 html.Div(id="save-toast", style={"display": "none"}),
                 

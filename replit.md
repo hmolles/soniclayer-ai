@@ -15,6 +15,7 @@ The application is running with pre-processed audio segments. New audio processi
 - **Port:** 8000 (localhost)
 - **Routes:**
   - `/evaluate/` - Audio upload endpoint
+  - `/re-evaluate/{audio_id}` - Re-run evaluations with updated persona settings
   - `/segments/{audio_id}` - Get segment data
   - `/audio/{audio_id}` - Serve audio files
   - `/status/{audio_id}` - Processing status
@@ -72,8 +73,14 @@ See `README.md` and `QUICK_START.md` for detailed instructions.
   - Segment highlighting updates automatically as playback progresses
   - Metadata panel updates to show current segment transcript and evaluations
   - Clickable waveform for instant seeking
+- **✅ Persona Editing with Re-evaluation** - Complete admin workflow
+  - Inline expansion UI for editing persona details (name, emoji, description, prompts)
+  - Real-time JSON validation with error highlighting
+  - Save with toast notifications
+  - Re-evaluate button to re-run analysis with updated persona settings
+  - Automatic dashboard refresh after re-evaluation
 - **Dynamic Persona Registry System** - Unlimited personas via central config
-- **Admin Interface** - Web-based UI for adding personas without code changes
+- **Admin Interface** - Web-based UI for adding/editing personas without code changes
 - **JSON Validation** - Real-time validation for persona prompts
 - **Azure OpenAI Integration** - Replaced Langflow with direct Azure GPT-4o-mini calls
 
