@@ -172,14 +172,11 @@ def toggle_pages(pathname, search):
         # Default to file browser
         return visible, hidden, hidden
 
-# Load dashboard data when audio_id changes in URL
+# Load dashboard data when audio_id changes in URL (STORES ONLY)
 @app.callback(
     Output('current-audio-id', 'data'),
     Output('segments-store', 'data'),
     Output('waveform-data-store', 'data'),
-    Output('audio-player-container', 'children'),
-    Output('waveform-graph', 'figure'),
-    Output('dashboard-audio-id-display', 'children'),
     Input('url', 'pathname'),
     Input('url', 'search')
 )
@@ -211,15 +208,12 @@ def load_dashboard_data(pathname, search):
     
     if not audio_id:
         # No audio selected
-        empty_fig = {}
-        return None, [], {'time': [], 'amplitude': []}, html.Div("Select an audio file from Files"), empty_fig, "Select an audio file from Files"
+        return None, [], {'time': [], 'amplitude': []}
     
     # Load audio data
     audio_path = f"uploads/{audio_id}.wav"
     if not Path(audio_path).exists():
-        error_msg = f"Audio file not found: {audio_id[:16]}..."
-        empty_fig = {}
-        return None, [], {'time': [], 'amplitude': []}, html.Div(error_msg), empty_fig, error_msg
+        return None, [], {'time': [], 'amplitude': []}
     
     print(f"Loading dashboard data for audio: {audio_id}")
     import numpy as np
@@ -227,16 +221,39 @@ def load_dashboard_data(pathname, search):
     segments = fetch_segments(audio_id)
     print(f"Loaded {len(segments)} segments")
     
-    # Create initial figure
-    fig = render_waveform_with_highlight(time, amplitude, segments)
+    return audio_id, segments, {'time': time.tolist(), 'amplitude': amplitude.tolist()}
+
+# Populate visual elements from stores
+@app.callback(
+    Output('audio-player-container', 'children'),
+    Output('waveform-graph', 'figure'),
+    Output('dashboard-audio-id-display', 'children'),
+    Input('current-audio-id', 'data'),
+    Input('segments-store', 'data'),
+    Input('waveform-data-store', 'data'),
+    prevent_initial_call=False
+)
+def populate_dashboard(audio_id, segments, waveform_data):
+    import numpy as np
+    
+    print(f"[POPULATE] audio_id={audio_id}, segments={len(segments) if segments else 0}, waveform_has_data={bool(waveform_data and waveform_data.get('time'))}")
+    
+    if not audio_id or not segments or not waveform_data or not waveform_data.get('time'):
+        print(f"[POPULATE] Returning empty - missing data")
+        return html.Div("Select an audio file from Files"), {}, "Select an audio file from Files"
     
     # Create audio player
     player = render_audio_player(audio_id)
     
+    # Create initial waveform
+    time = np.array(waveform_data['time'])
+    amplitude = np.array(waveform_data['amplitude'])
+    fig = render_waveform_with_highlight(time, amplitude, segments)
+    
     # Display text
     display_text = f"Audio ID: {audio_id[:16]}..."
     
-    return audio_id, segments, {'time': time.tolist(), 'amplitude': amplitude.tolist()}, player, fig, display_text
+    return player, fig, display_text
 
 # Persona creation callback
 @app.callback(
