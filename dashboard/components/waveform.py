@@ -21,7 +21,7 @@ def render_waveform_with_highlight(time, amplitude, segments, cursor_position=No
         y=amplitude,
         mode='lines',
         name='Waveform',
-        line=dict(color='lightblue')
+        line=dict(color='#0f172a')  # slate-900 dark color
     ))
 
     # Use cached min/max if provided, otherwise calculate

@@ -60,6 +60,7 @@ def get_all_audio_files():
             {
                 "audio_id": "50f53153...",
                 "filename": "50f53153....wav",
+                "display_name": "original_upload.wav",  # Original filename if available
                 "file_size_mb": 12.5,
                 "upload_date": "2025-11-05 10:30",
                 "num_segments": 18,
@@ -67,6 +68,11 @@ def get_all_audio_files():
             }
         ]
     """
+    import sys
+    from pathlib import Path as SysPath
+    sys.path.insert(0, str(SysPath(__file__).parent.parent.parent / "app"))
+    from services.cache import redis_conn
+    
     uploads_dir = Path("uploads")
     
     if not uploads_dir.exists():
@@ -84,6 +90,14 @@ def get_all_audio_files():
             # Extract audio_id (filename without extension)
             audio_id = file_path.stem
             
+            # Try to fetch original filename from Redis
+            original_name = redis_conn.get(f"original_filename:{audio_id}")
+            if original_name:
+                display_name = original_name.decode('utf-8') if isinstance(original_name, bytes) else original_name
+            else:
+                # Fallback to truncated hash
+                display_name = f"{audio_id[:12]}..." if len(audio_id) > 12 else audio_id
+            
             # Try to get number of segments from backend
             num_segments = get_segment_count(audio_id)
             
@@ -93,6 +107,7 @@ def get_all_audio_files():
             audio_files.append({
                 "audio_id": audio_id,
                 "filename": file_path.name,
+                "display_name": display_name,
                 "file_size_mb": file_size_mb,
                 "upload_date": upload_date,
                 "num_segments": num_segments,

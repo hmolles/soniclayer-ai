@@ -54,6 +54,10 @@ async def evaluate_audio(file: UploadFile):
         # Generate unique audio ID from file hash
         audio_id = generate_audio_hash(audio_bytes)
         
+        # Store original filename for UI display
+        if file.filename:
+            redis_conn.set(f"original_filename:{audio_id}", file.filename, ex=86400)  # 24h TTL
+        
         # Check if this audio was already processed (deduplication)
         existing_segments = redis_conn.get(f"transcript_segments:{audio_id}")
         if existing_segments:

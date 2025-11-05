@@ -16,6 +16,7 @@ from personas_config import get_all_personas
 # Import persona prompts from langflow_client for editing
 sys.path.insert(0, str(Path(__file__).parent.parent / "app"))
 from services.langflow_client import PERSONA_PROMPTS
+from services.cache import redis_conn
 
 # Get default audio_id from command line (for backwards compatibility)
 default_audio_id = sys.argv[1] if len(sys.argv) > 1 else None
@@ -325,8 +326,8 @@ app.layout = html.Div([
                 })
             ]),
             
-            # Tab 2: Summary View (new aggregated stats)
-            dcc.Tab(label="Summary", value="summary-tab",
+            # Tab 2: Insights View (aggregated stats)
+            dcc.Tab(label="Insights", value="summary-tab",
                 style={
                     "padding": "12px 20px",
                     "fontSize": "13px",
@@ -1047,6 +1048,18 @@ def update_selected_audio(*n_clicks_list):
     raise PreventUpdate
 
 
+# Helper function to get display name for audio file
+def get_audio_display_name(audio_id):
+    """Get the original filename if available, otherwise use truncated hash."""
+    # Try to fetch original filename from Redis
+    original_name = redis_conn.get(f"original_filename:{audio_id}")
+    if original_name:
+        return original_name.decode('utf-8') if isinstance(original_name, bytes) else original_name
+    
+    # Fallback to truncated hash
+    return f"{audio_id[:12]}..." if len(audio_id) > 12 else audio_id
+
+
 # Callback 2: Handle file selection and load data
 @app.callback(
     Output('current-audio-id', 'data'),
@@ -1100,8 +1113,11 @@ def load_audio_file(audio_id):
     # Create audio player
     player = render_audio_player(audio_id)
     
-    # Create initial waveform with audio_id as title
-    fig = render_waveform_with_highlight(time, amplitude, segments, amp_min=amp_min, amp_max=amp_max, audio_id=audio_id)
+    # Get display name (original filename if available)
+    display_name = get_audio_display_name(audio_id)
+    
+    # Create initial waveform with display name as title
+    fig = render_waveform_with_highlight(time, amplitude, segments, amp_min=amp_min, amp_max=amp_max, audio_id=display_name)
     
     # Initial metadata (first segment)
     if segments and len(segments) > 0:
@@ -1422,8 +1438,11 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked, au
     if active_segment:
         print(f"[AUTO_UPDATE] Active segment: {active_segment.get('start')}-{active_segment.get('end')}")
     
-    # Update waveform with cursor (pass cached min/max for performance and audio_id for title)
-    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time, amp_min=amp_min, amp_max=amp_max, audio_id=audio_id)
+    # Get display name (original filename if available)
+    display_name = get_audio_display_name(audio_id) if audio_id else None
+    
+    # Update waveform with cursor (pass cached min/max for performance and display name for title)
+    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time, amp_min=amp_min, amp_max=amp_max, audio_id=display_name)
     
     # Update metadata
     if active_segment:
@@ -1478,32 +1497,31 @@ def update_summary_panel(summary_data, is_collapsed):
         )
     
     # Use the summary_panel component to render
-    return render_collapsible_summary(personas, summary_data, is_expanded=not is_collapsed)
+    return render_collapsible_summary(personas, summary_data, is_expanded=True)  # Always expanded
 
 
-# Callback 6.3: Toggle summary collapse state (Phase 3) - SIMPLIFIED
-# Only update the collapse state store. The panel re-render is handled by update_summary_panel.
-@app.callback(
-    Output('summary-collapsed', 'data'),
-    Output('summary-panel-container', 'children', allow_duplicate=True),
-    Input('summary-collapse-toggle', 'n_clicks'),
-    State('summary-collapsed', 'data'),
-    State('summary-data-store', 'data'),
-    prevent_initial_call=True
-)
-def toggle_summary_collapse(n_clicks, is_collapsed, summary_data):
-    """Toggle the collapse state and re-render the summary panel."""
-    if summary_data is None:
-        raise PreventUpdate
-    
-    # Toggle state
-    new_collapsed = not is_collapsed
-    
-    # Re-render the entire panel with new state
-    personas = get_all_personas()
-    new_panel = render_collapsible_summary(personas, summary_data, is_expanded=not new_collapsed)
-    
-    return new_collapsed, new_panel
+# Callback 6.3: Toggle summary collapse state - DISABLED (always visible now)
+# @app.callback(
+#     Output('summary-collapsed', 'data'),
+#     Output('summary-panel-container', 'children', allow_duplicate=True),
+#     Input('summary-collapse-toggle', 'n_clicks'),
+#     State('summary-collapsed', 'data'),
+#     State('summary-data-store', 'data'),
+#     prevent_initial_call=True
+# )
+# def toggle_summary_collapse(n_clicks, is_collapsed, summary_data):
+#     """Toggle the collapse state and re-render the summary panel."""
+#     if summary_data is None:
+#         raise PreventUpdate
+#     
+#     # Toggle state
+#     new_collapsed = not is_collapsed
+#     
+#     # Re-render the entire panel with new state
+#     personas = get_all_personas()
+#     new_panel = render_collapsible_summary(personas, summary_data, is_expanded=not new_collapsed)
+#     
+#     return new_collapsed, new_panel
 
 
 # ============================================================================

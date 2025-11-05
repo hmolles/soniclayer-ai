@@ -94,81 +94,49 @@ def render_persona_summary_card(persona: dict, stats: dict, compact: bool = Fals
     worst_segments = stats.get("worst_segments", [])
     
     if compact:
-        # Compact version for collapsible panel - card-style with larger score
+        # Extra compact version for always-visible panel
         return html.Div([
-            # Emoji at top
-            html.Div(
-                persona["emoji"],
-                style={
-                    "fontSize": "32px",
-                    "textAlign": "center",
-                    "marginBottom": "8px"
-                }
-            ),
-            
-            # Persona name
-            html.Div(
-                persona["display_name"],
-                style={
-                    "fontSize": "13px",
-                    "fontWeight": "600",
-                    "color": "#111827",
-                    "textAlign": "center",
-                    "marginBottom": "12px"
-                }
-            ),
-            
-            # Large score display
+            # Emoji and name inline
             html.Div([
-                html.Span(f"{avg_score:.1f}", style={
-                    "fontSize": "36px",
-                    "fontWeight": "700",
-                    "color": get_score_color(avg_score),
-                    "lineHeight": "1"
+                html.Span(persona["emoji"], style={
+                    "fontSize": "20px",
+                    "marginRight": "6px"
                 }),
-                html.Span("/5.0", style={
-                    "fontSize": "14px",
-                    "color": "#9ca3af",
-                    "marginLeft": "4px"
+                html.Span(persona["display_name"], style={
+                    "fontSize": "12px",
+                    "fontWeight": "500",
+                    "color": "#0f172a"
                 })
             ], style={
-                "textAlign": "center",
-                "marginBottom": "12px"
+                "display": "flex",
+                "alignItems": "center",
+                "marginBottom": "6px"
             }),
             
-            # Confidence bar
+            # Score and confidence inline
             html.Div([
-                html.Div(style={
-                    "width": "100%",
-                    "height": "4px",
-                    "backgroundColor": "#e5e7eb",
-                    "borderRadius": "2px",
-                    "overflow": "hidden"
-                }, children=[
-                    html.Div(style={
-                        "width": f"{avg_confidence * 100}%",
-                        "height": "100%",
-                        "backgroundColor": get_score_color(avg_score),
-                        "borderRadius": "2px",
-                        "transition": "width 0.5s ease"
-                    })
-                ]),
-                html.Div(f"{avg_confidence*100:.0f}% confidence", style={
-                    "fontSize": "10px",
-                    "color": "#6b7280",
-                    "marginTop": "6px",
-                    "textAlign": "center"
+                html.Span(f"{avg_score:.1f}", style={
+                    "fontSize": "20px",
+                    "fontWeight": "700",
+                    "color": get_score_color(avg_score),
+                    "marginRight": "4px"
+                }),
+                html.Span(f"({avg_confidence*100:.0f}%)", style={
+                    "fontSize": "11px",
+                    "color": "#94a3b8"
                 })
-            ])
+            ], style={
+                "display": "flex",
+                "alignItems": "baseline"
+            })
             
         ], style={
-            "padding": "16px",
-            "backgroundColor": "#ffffff",
-            "borderRadius": "8px",
-            "border": f"2px solid {get_score_color(avg_score)}",
-            "boxShadow": "0 2px 4px rgba(0,0,0,0.06)",
-            "transition": "transform 0.2s ease, box-shadow 0.2s ease",
-            "textAlign": "center"
+            "padding": "8px 12px",
+            "backgroundColor": "#fafafa",
+            "borderRadius": "4px",
+            "border": f"1px solid {get_score_color(avg_score)}",
+            "borderLeftWidth": "3px",
+            "minWidth": "140px"
         })
     else:
         # Full version for detailed summary tab - MINIMAL DESIGN
@@ -336,20 +304,20 @@ def render_persona_summary_card(persona: dict, stats: dict, compact: bool = Fals
 
 def render_collapsible_summary(personas: list, summary_data: dict, is_expanded: bool = True) -> html.Div:
     """
-    Render collapsible summary panel for main dashboard (Phase 3).
+    Render summary panel for main dashboard (Phase 3) - always visible, compact design.
     
     Args:
         personas: List of persona config dicts
         summary_data: Full summary data from /summary/{audio_id} endpoint
-        is_expanded: Whether panel starts expanded
+        is_expanded: Ignored - panel is always visible now
         
     Returns:
-        Dash Div component containing the collapsible panel
+        Dash Div component containing the summary panel
     """
     if not summary_data or "personas" not in summary_data:
         return html.Div(
             "Summary data not available",
-            style={"padding": "16px", "color": "#6b7280", "fontStyle": "italic"}
+            style={"padding": "12px", "color": "#6b7280", "fontStyle": "italic", "fontSize": "13px"}
         )
     
     personas_data = summary_data.get("personas", {})
@@ -365,43 +333,37 @@ def render_collapsible_summary(personas: list, summary_data: dict, is_expanded: 
             persona_cards.append(card)
     
     return html.Div([
-        # Toggle button
-        html.Button([
-            html.Span("▼" if is_expanded else "▶", style={"marginRight": "8px"}),
-            html.Span(f"📊 Summary ({num_segments} segments)", style={"fontWeight": "600"})
-        ], 
-        id="summary-collapse-toggle",
-        n_clicks=0,
-        style={
-            "width": "100%",
-            "padding": "12px 16px",
-            "backgroundColor": "#f3f4f6",
-            "border": "none",
-            "borderRadius": "8px 8px 0 0" if is_expanded else "8px",
-            "cursor": "pointer",
-            "fontSize": "14px",
-            "color": "#111827",
-            "textAlign": "left",
-            "transition": "background-color 0.2s",
+        # Simple header (no toggle button)
+        html.Div([
+            html.Span(f"📊 Summary ({num_segments} segments)", style={
+                "fontWeight": "500",
+                "fontSize": "13px",
+                "color": "#0f172a"
+            })
+        ], style={
+            "padding": "8px 12px",
+            "backgroundColor": "#fafafa",
+            "borderRadius": "6px 6px 0 0",
+            "borderBottom": "1px solid #e5e7eb"
         }),
         
-        # Collapsible content
+        # Always-visible content
         html.Div(
             persona_cards,
-            id="summary-collapse-content",
             style={
-                "padding": "16px",
+                "padding": "12px",
                 "backgroundColor": "#ffffff",
-                "borderRadius": "0 0 8px 8px",
+                "borderRadius": "0 0 6px 6px",
                 "border": "1px solid #e5e7eb",
                 "borderTop": "none",
-                "display": "grid" if is_expanded else "none",
-                "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))",
-                "gap": "12px"
+                "display": "flex",
+                "flexWrap": "wrap",
+                "gap": "8px"
             }
         )
     ], style={
-        "marginBottom": "16px"
+        "marginBottom": "0",
+        "marginTop": "12px"
     })
 
 
