@@ -21,6 +21,12 @@ PERSONAS = [
         "display_name": "Business Owner",
         "emoji": "\ud83e\uddd1",
         "description": "Male business owner"
+    },
+    {
+        "id": "stay_at_home_mum",
+        "display_name": "Stay At Home Mum",
+        "emoji": "\u26bd\ufe0f",
+        "description": "Stay at home Mum"
     }
 ]
 
