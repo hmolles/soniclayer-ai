@@ -216,14 +216,22 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
     
     # Save persona to config files
     try:
+        import os
+        print(f"DEBUG: Creating persona {persona_id} with name {display_name}")
+        
         # Add to backend config
         backend_config_path = Path("app/config/personas.py")
         dashboard_config_path = Path("dashboard/personas_config.py")
         langflow_config_path = Path("app/services/langflow_client.py")
         
+        print(f"DEBUG: Backend config path: {backend_config_path.absolute()}")
+        print(f"DEBUG: Path exists: {backend_config_path.exists()}")
+        
         # Read backend config
         with open(backend_config_path, 'r') as f:
             backend_content = f.read()
+        
+        print(f"DEBUG: Read backend config, length: {len(backend_content)}")
         
         # Create new persona entry for backend
         new_backend_entry = f'''    {{
@@ -241,9 +249,13 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
             f",\n{new_backend_entry}\n]"
         )
         
+        print(f"DEBUG: Updated backend config, new length: {len(backend_content)}")
+        
         # Write backend config
+        print(f"DEBUG: Writing backend config...")
         with open(backend_config_path, 'w') as f:
             f.write(backend_content)
+        print(f"DEBUG: Backend config written successfully")
         
         # Update dashboard config
         with open(dashboard_config_path, 'r') as f:
@@ -279,6 +291,8 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
         
         with open(langflow_config_path, 'w') as f:
             f.write(langflow_content)
+        
+        print(f"DEBUG: Creating worker file...")
         
         # Create worker file
         worker_template = f'''import json
@@ -349,10 +363,13 @@ def process_transcript(audio_id, transcript_segments, classifier_results):
 '''
         
         worker_path = Path(f"app/workers/{persona_id}_worker.py")
+        print(f"DEBUG: Worker path: {worker_path.absolute()}")
         with open(worker_path, 'w') as f:
             f.write(worker_template)
+        print(f"DEBUG: Worker file created successfully at {worker_path}")
         
         # Clear form and redirect
+        print(f"DEBUG: Persona {persona_id} created successfully!")
         return html.Div("✅ Persona created successfully! Redirecting...", style={
             "color": "#059669",
             "padding": "12px",
