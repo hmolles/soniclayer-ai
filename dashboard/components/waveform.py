@@ -74,7 +74,8 @@ def render_waveform_with_highlight(time, amplitude, segments, cursor_position=No
             showticklabels=False  # Hide y-axis tick labels
         ),
         height=400,
-        margin=dict(l=40, r=40, t=40, b=40)
+        margin=dict(l=40, r=40, t=40, b=40),
+        uirevision='constant'  # Prevent Plotly from resetting zoom/pan on updates
     )
 
     return fig

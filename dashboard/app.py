@@ -281,21 +281,20 @@ app.layout = html.Div([
                             config={'displayModeBar': False}
                         ),
                         
-                        # Audio player controls below waveform
-                        html.Div(id="audio-player-container", children=html.Div([
-                            html.Audio(
-                                id="audio-player",
-                                src="",
-                                controls=True,
+                        # Audio player controls below waveform (initially empty, populated by callback)
+                        html.Div(
+                            id="audio-player-container",
+                            children=html.Div(
+                                "Select an audio file to load player",
                                 style={
-                                    'width': '100%',
-                                    'outline': 'none'
+                                    "padding": "20px",
+                                    "color": "#6b7280",
+                                    "textAlign": "center",
+                                    "marginBottom": "20px",
+                                    "marginTop": "10px"
                                 }
                             )
-                        ], style={
-                            'marginBottom': '20px',
-                            'marginTop': '10px'
-                        })),
+                        ),
                         
                         # Collapsible summary panel at bottom
                         html.Div(id="summary-panel-container", children=html.Div(
@@ -1076,9 +1075,10 @@ def get_audio_display_name(audio_id):
     Output('waveform-graph', 'figure', allow_duplicate=True),
     Output('segment-metadata', 'children', allow_duplicate=True),
     Input('selected-audio-store', 'data'),
+    State('current-audio-id', 'data'),
     prevent_initial_call='initial_duplicate'
 )
-def load_audio_file(audio_id):
+def load_audio_file(audio_id, current_audio_id):
     import numpy as np
     
     print(f"[LOAD_AUDIO] Loading audio_id: {audio_id}")
@@ -1086,6 +1086,12 @@ def load_audio_file(audio_id):
     # If no audio selected, use default
     if not audio_id:
         audio_id = default_audio_id
+    
+    # CRITICAL FIX: If audio_id hasn't changed, don't recreate the player!
+    # Return current audio_id to update the store, but no_update for everything else
+    if audio_id == current_audio_id and current_audio_id is not None:
+        print(f"[LOAD_AUDIO] Audio already loaded ({audio_id}), preventing player recreation")
+        return audio_id, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # If still no audio_id, return empty state
     if not audio_id:
@@ -1347,13 +1353,33 @@ def process_transcript(audio_id, transcript_segments, classifier_results):
 app.clientside_callback(
     """
     function(n_intervals) {
-        const audioElement = document.getElementById('audio-player');
-        
-        if (audioElement && audioElement.currentTime !== undefined && !isNaN(audioElement.currentTime)) {
-            return audioElement.currentTime;
+        try {
+            const audioElement = document.getElementById('audio-player');
+            
+            // Log every 5 intervals for debugging
+            if (n_intervals % 5 === 0) {
+                console.log('[Playback Sync] Interval:', n_intervals, 'Audio element:', audioElement ? 'found' : 'NOT FOUND');
+            }
+            
+            if (!audioElement) {
+                return -1;  // Return -1 instead of no_update so we can see it's running
+            }
+            
+            const currentTime = audioElement.currentTime;
+            
+            if (n_intervals % 5 === 0) {
+                console.log('[Playback Sync] currentTime:', currentTime, 'paused:', audioElement.paused);
+            }
+            
+            if (currentTime !== undefined && !isNaN(currentTime)) {
+                return currentTime;
+            }
+            
+            return 0;  // Return 0 if currentTime is invalid
+        } catch (error) {
+            console.error('[Playback Sync] Error:', error);
+            return -999;  // Return error code
         }
-        
-        return window.dash_clientside.no_update;
     }
     """,
     Output('current-time-store', 'data'),
@@ -1399,6 +1425,14 @@ app.clientside_callback(
 )
 def auto_update_playback(current_time, segments, waveform_data, user_clicked, audio_id):
     import numpy as np
+    
+    # Decode sentinel values from clientside callback
+    if current_time == -1:
+        print("[AUTO_UPDATE] Clientside callback: Audio element NOT FOUND")
+        return dash.no_update, dash.no_update, dash.no_update
+    elif current_time == -999:
+        print("[AUTO_UPDATE] Clientside callback: JavaScript ERROR")
+        return dash.no_update, dash.no_update, dash.no_update
     
     print(f"[AUTO_UPDATE] time={current_time}, user_clicked={user_clicked}, has_segments={bool(segments)}, has_waveform={bool(waveform_data)}")
     
@@ -1454,8 +1488,13 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked, au
     # Update metadata
     if active_segment:
         metadata = render_metadata_panel(active_segment)
+        # Log metadata component type for debugging
+        metadata_type = type(metadata).__name__ if metadata else "None"
+        print(f"[AUTO_UPDATE] ✅ Updated waveform cursor to {current_time:.2f}s and metadata for segment {active_segment.get('start')}-{active_segment.get('end')}")
+        print(f"[AUTO_UPDATE] Metadata component type: {metadata_type}")
         return fig, metadata, False
     else:
+        print(f"[AUTO_UPDATE] ✅ Updated waveform cursor to {current_time:.2f}s (no active segment)")
         return fig, dash.no_update, False
 
 
