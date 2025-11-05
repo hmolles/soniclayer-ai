@@ -4,10 +4,10 @@ import time
 from openai import AzureOpenAI
 
 # Azure Whisper configuration
-AZURE_WHISPER_ENDPOINT = "https://admin-mhlf1bll-swedencentral.cognitiveservices.azure.com/openai/deployments/whisper/audio/translations"
+AZURE_WHISPER_ENDPOINT = "https://admin-mhlg381w-northcentralus.cognitiveservices.azure.com"
 AZURE_WHISPER_KEY = os.getenv("AZURE_WHISPER_KEY")
 AZURE_WHISPER_API_VERSION = "2024-06-01"
-AZURE_WHISPER_DEPLOYMENT_NAME = "whisper"  # Deployment name from endpoint
+AZURE_WHISPER_DEPLOYMENT_NAME = "whisper"  # Deployment name from Azure
 
 # Rate limiting: 3 requests per minute
 RATE_LIMIT_REQUESTS = 3
@@ -45,7 +45,7 @@ def transcribe_audio(file_bytes: bytes) -> str:
         client = AzureOpenAI(
             api_key=AZURE_WHISPER_KEY,
             api_version=AZURE_WHISPER_API_VERSION,
-            azure_endpoint=AZURE_WHISPER_ENDPOINT.rsplit("/", 3)[0]  # Get base URL
+            azure_endpoint=AZURE_WHISPER_ENDPOINT
         )
         
         with open(tmp_path, "rb") as audio_file:
@@ -74,7 +74,7 @@ def transcribe_audio_with_timestamps(file_bytes: bytes, segment_duration: float 
         client = AzureOpenAI(
             api_key=AZURE_WHISPER_KEY,
             api_version=AZURE_WHISPER_API_VERSION,
-            azure_endpoint=AZURE_WHISPER_ENDPOINT.rsplit("/", 3)[0]  # Get base URL
+            azure_endpoint=AZURE_WHISPER_ENDPOINT
         )
         
         with open(tmp_path, "rb") as audio_file:
