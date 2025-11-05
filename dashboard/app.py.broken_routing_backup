@@ -5,19 +5,17 @@ from pathlib import Path
 from components.waveform import render_waveform_with_highlight
 from components.audio_player import render_audio_player
 from components.metadata_panel import render_metadata_panel
+from components.navigation import render_navigation
 from components.admin_page import render_admin_page
+from components.file_browser import render_file_browser
 from services.audio_utils import extract_waveform
 from services.api_client import fetch_segments
-from utils.audio_scanner import get_all_audio_files
 
 # Get default audio_id from command line (for backwards compatibility)
-default_audio_id = sys.argv[1] if len(sys.argv) > 1 else None
+default_audio_id = sys.argv[1] if len(sys.argv) > 1 else "50f5315356317fa1a803bc5a754e4899d3275b711590f5baa7db35947f04bf70"
 
 print(f"Dashboard server starting...")
-if default_audio_id:
-    print(f"Default audio (command-line): {default_audio_id}")
-else:
-    print("No default audio - use file browser to select")
+print(f"Default audio for command-line mode: {default_audio_id}")
 
 # Initialize Dash app
 app = Dash(__name__, assets_folder='assets')
@@ -45,92 +43,10 @@ def proxy_audio(audio_id):
         return Response(f"Error fetching audio: {str(e)}", status=500)
 
 
-def create_file_sidebar():
-    """Create the left sidebar with file browser."""
-    audio_files = get_all_audio_files()
-    
-    if not audio_files:
-        file_list = html.Div(
-            "No audio files found",
-            style={
-                "padding": "20px",
-                "color": "#6b7280",
-                "fontSize": "14px",
-                "textAlign": "center"
-            }
-        )
-    else:
-        # Create clickable file items
-        file_items = []
-        for audio in audio_files:
-            short_id = audio["audio_id"][:12] + "..."
-            
-            item = html.Div([
-                html.Div([
-                    html.Span("🎵", style={"fontSize": "20px", "marginRight": "8px"}),
-                    html.Div([
-                        html.Div(short_id, style={
-                            "fontSize": "13px",
-                            "fontWeight": "600",
-                            "color": "#111827",
-                            "marginBottom": "2px"
-                        }),
-                        html.Div(f"{audio['num_segments']} segments", style={
-                            "fontSize": "11px",
-                            "color": "#6b7280"
-                        })
-                    ])
-                ], style={
-                    "display": "flex",
-                    "alignItems": "center"
-                })
-            ], 
-            id={"type": "file-item", "audio_id": audio["audio_id"]},
-            n_clicks=0,
-            style={
-                "padding": "12px",
-                "marginBottom": "4px",
-                "backgroundColor": "#f9fafb",
-                "borderRadius": "6px",
-                "cursor": "pointer",
-                "border": "1px solid #e5e7eb",
-                "transition": "all 0.2s"
-            })
-            
-            file_items.append(item)
-        
-        file_list = html.Div(file_items, id="file-list-container")
-    
+def create_dashboard_layout():
+    """Create the dashboard page structure (will be populated dynamically)"""
     return html.Div([
-        html.Div([
-            html.H3("📁 Audio Files", style={
-                "margin": "0 0 16px 0",
-                "fontSize": "16px",
-                "color": "#111827"
-            }),
-            file_list
-        ])
-    ], style={
-        "width": "280px",
-        "backgroundColor": "#ffffff",
-        "borderRight": "2px solid #e5e7eb",
-        "padding": "20px",
-        "overflowY": "auto",
-        "height": "100vh",
-        "position": "fixed",
-        "left": "0",
-        "top": "0"
-    })
-
-
-# Main app layout - single page with all components at top level
-app.layout = html.Div([
-    # Left sidebar - file browser
-    create_file_sidebar(),
-    
-    # Main content area (with left margin for sidebar)
-    html.Div([
-        # Header
+        # Header with navigation
         html.Div([
             html.Div([
                 html.H1("🎵 SonicLayer AI - Audio Analysis Dashboard", style={
@@ -138,28 +54,13 @@ app.layout = html.Div([
                     "color": "#111827",
                     "fontSize": "28px"
                 }),
-                html.P(id="dashboard-audio-id-display", children="Select an audio file from the sidebar", style={
+                html.P(id="dashboard-audio-id-display", children="Select an audio file from Files", style={
                     "margin": "4px 0 0 0",
                     "color": "#6b7280",
                     "fontSize": "14px"
                 })
             ]),
-            html.Div([
-                html.Button("⚙️ Admin", id="admin-toggle-btn", n_clicks=0, style={
-                    "padding": "8px 16px",
-                    "borderRadius": "6px",
-                    "border": "1px solid #e5e7eb",
-                    "backgroundColor": "#ffffff",
-                    "color": "#374151",
-                    "fontWeight": "500",
-                    "fontSize": "14px",
-                    "cursor": "pointer"
-                })
-            ], style={
-                "position": "absolute",
-                "top": "20px",
-                "right": "20px"
-            })
+            render_navigation("/dashboard")
         ], style={
             "padding": "20px",
             "backgroundColor": "#ffffff",
@@ -168,14 +69,11 @@ app.layout = html.Div([
             "position": "relative"
         }),
         
-        # Main content - two columns
+        # Main content area - two columns
         html.Div([
             # Left column - Waveform and audio player
             html.Div([
-                html.Div(id="audio-player-container", children=html.Div(
-                    "Select an audio file to begin",
-                    style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}
-                )),
+                html.Div(id="audio-player-container"),
                 dcc.Graph(
                     id="waveform-graph",
                     figure={},
@@ -191,7 +89,7 @@ app.layout = html.Div([
             # Right column - Metadata panel
             html.Div(
                 id="segment-metadata",
-                children=html.Div("Select an audio file to view analysis", style={"padding": "20px", "color": "#6b7280"}),
+                children=html.Div("Select an audio file to view analysis", style={"padding": "20px"}),
                 style={
                     "width": "450px",
                     "backgroundColor": "#ffffff",
@@ -212,168 +110,152 @@ app.layout = html.Div([
         dcc.Interval(id="playback-sync", interval=1000, n_intervals=0),
         dcc.Store(id="user-clicked", data=False),
         dcc.Store(id='current-time-store', data=0),
-        dcc.Store(id='current-audio-id', data=default_audio_id),
+        dcc.Store(id='current-audio-id', data=None),
         dcc.Store(id='segments-store', data=[]),
         dcc.Store(id='waveform-data-store', data={'time': [], 'amplitude': []}),
-    ], style={
-        "marginLeft": "280px",  # Offset for fixed sidebar
-        "minHeight": "100vh"
-    }),
+    ], id="dashboard-page", style={"display": "none"})
+
+# Main app layout with all pages
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
     
-    # Admin modal overlay (hidden by default)
-    html.Div([
-        html.Div([
-            html.Div([
-                html.H2("⚙️ Admin Panel", style={"margin": "0 0 20px 0"}),
-                html.Button("✕ Close", id="admin-close-btn", n_clicks=0, style={
-                    "position": "absolute",
-                    "top": "20px",
-                    "right": "20px",
-                    "padding": "8px 16px",
-                    "borderRadius": "6px",
-                    "border": "1px solid #e5e7eb",
-                    "backgroundColor": "#ffffff",
-                    "cursor": "pointer"
-                }),
-                render_admin_page()
-            ], style={
-                "backgroundColor": "#ffffff",
-                "borderRadius": "8px",
-                "padding": "30px",
-                "maxWidth": "800px",
-                "maxHeight": "90vh",
-                "overflowY": "auto",
-                "position": "relative"
-            })
-        ], style={
-            "position": "fixed",
-            "top": "0",
-            "left": "0",
-            "width": "100%",
-            "height": "100%",
-            "backgroundColor": "rgba(0,0,0,0.5)",
-            "display": "flex",
-            "alignItems": "center",
-            "justifyContent": "center",
-            "zIndex": "1000"
-        })
-    ], id="admin-modal", style={"display": "none"})
+    # File Browser Page
+    html.Div(id="file-browser-page", children=render_file_browser(), style={"display": "none"}),
+    
+    # Dashboard Page
+    create_dashboard_layout(),
+    
+    # Admin Page
+    html.Div(id="admin-page", children=render_admin_page(), style={"display": "none"}),
     
 ], style={
     "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-    "backgroundColor": "#f3f4f6"
+    "backgroundColor": "#f3f4f6",
+    "minHeight": "100vh"
 })
 
-
-# Callback 1: Toggle admin modal
+# Routing callback - toggle page visibility
 @app.callback(
-    Output('admin-modal', 'style'),
-    Input('admin-toggle-btn', 'n_clicks'),
-    Input('admin-close-btn', 'n_clicks'),
-    prevent_initial_call=True
+    Output('file-browser-page', 'style'),
+    Output('dashboard-page', 'style'),
+    Output('admin-page', 'style'),
+    Input('url', 'pathname'),
+    Input('url', 'search')
 )
-def toggle_admin_modal(open_clicks, close_clicks):
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        return {"display": "none"}
+def toggle_pages(pathname, search):
+    """Show/hide pages based on pathname"""
     
-    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    # Handle URL-encoded query strings in pathname (screenshot tool quirk)
+    if '%3F' in pathname or '?' in pathname:
+        if '?' in pathname:
+            pathname, search = pathname.split('?', 1)
+            search = '?' + search
+        else:
+            # URL-encoded case
+            import urllib.parse
+            pathname = urllib.parse.unquote(pathname)
+            if '?' in pathname:
+                pathname, search = pathname.split('?', 1)
+                search = '?' + search
     
-    if button_id == 'admin-toggle-btn':
-        return {"display": "block"}
+    # Default styles
+    hidden = {"display": "none"}
+    visible = {"display": "block"}
+    
+    if pathname == '/admin':
+        return hidden, hidden, visible
+    elif pathname == '/dashboard' or (pathname == '/' and search and 'audio_id=' in search):
+        return hidden, visible, hidden
+    elif pathname == '/files' or pathname == '/':
+        return visible, hidden, hidden
     else:
-        return {"display": "none"}
+        # Default to file browser
+        return visible, hidden, hidden
 
-
-# Callback 2: Handle file selection and load data
+# Load dashboard data when audio_id changes in URL (STORES ONLY)
 @app.callback(
     Output('current-audio-id', 'data'),
     Output('segments-store', 'data'),
     Output('waveform-data-store', 'data'),
-    Output('audio-player-container', 'children'),
-    Output('waveform-graph', 'figure'),
-    Output('dashboard-audio-id-display', 'children'),
-    Output('segment-metadata', 'children'),
-    Input({'type': 'file-item', 'audio_id': dash.ALL}, 'n_clicks'),
-    State('current-audio-id', 'data'),
-    prevent_initial_call=False
+    Input('url', 'pathname'),
+    Input('url', 'search')
 )
-def load_audio_file(n_clicks_list, current_audio_id):
-    import numpy as np
+def load_dashboard_data(pathname, search):
+    """Load audio data when URL changes to dashboard with audio_id"""
     
-    ctx = dash.callback_context
+    # Handle URL-encoded query strings
+    if '%3F' in pathname or '?' in pathname:
+        if '?' in pathname:
+            pathname, search = pathname.split('?', 1)
+            search = '?' + search
+        else:
+            import urllib.parse
+            pathname = urllib.parse.unquote(pathname)
+            if '?' in pathname:
+                pathname, search = pathname.split('?', 1)
+                search = '?' + search
     
-    # Determine which audio to load
+    # Only load if we're on the dashboard page
+    if pathname != '/dashboard' and not (pathname == '/' and search and 'audio_id=' in search):
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    
+    # Extract audio_id from URL
     audio_id = None
+    if search:
+        import urllib.parse
+        params = urllib.parse.parse_qs(search.lstrip('?'))
+        audio_id = params.get('audio_id', [None])[0]
     
-    # Check if a file was clicked
-    if ctx.triggered and ctx.triggered[0]['prop_id'] != '.':
-        # Extract audio_id from the clicked item
-        triggered_id = ctx.triggered[0]['prop_id']
-        if 'file-item' in triggered_id:
-            import json as json_module
-            id_dict = json_module.loads(triggered_id.split('.')[0])
-            audio_id = id_dict['audio_id']
-            print(f"User selected audio: {audio_id}")
-    
-    # If no file clicked, use current or default
     if not audio_id:
-        audio_id = current_audio_id if current_audio_id else default_audio_id
-    
-    # If still no audio_id, return empty state
-    if not audio_id:
-        return (
-            None,
-            [],
-            {'time': [], 'amplitude': []},
-            html.Div("Select an audio file to begin", style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}),
-            {},
-            "Select an audio file from the sidebar",
-            html.Div("Select an audio file to view analysis", style={"padding": "20px", "color": "#6b7280"})
-        )
+        # No audio selected
+        return None, [], {'time': [], 'amplitude': []}
     
     # Load audio data
     audio_path = f"uploads/{audio_id}.wav"
     if not Path(audio_path).exists():
-        print(f"Audio file not found: {audio_path}")
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return None, [], {'time': [], 'amplitude': []}
     
-    print(f"Loading audio data for: {audio_id}")
-    
-    # Extract waveform
+    print(f"Loading dashboard data for audio: {audio_id}")
+    import numpy as np
     time, amplitude = extract_waveform(audio_path)
-    
-    # Fetch segments
     segments = fetch_segments(audio_id)
     print(f"Loaded {len(segments)} segments")
+    
+    return audio_id, segments, {'time': time.tolist(), 'amplitude': amplitude.tolist()}
+
+# Populate visual elements from stores
+@app.callback(
+    Output('audio-player-container', 'children'),
+    Output('waveform-graph', 'figure'),
+    Output('dashboard-audio-id-display', 'children'),
+    Input('current-audio-id', 'data'),
+    Input('segments-store', 'data'),
+    Input('waveform-data-store', 'data'),
+    prevent_initial_call=False
+)
+def populate_dashboard(audio_id, segments, waveform_data):
+    import numpy as np
+    
+    print(f"[POPULATE] audio_id={audio_id}, segments={len(segments) if segments else 0}, waveform_has_data={bool(waveform_data and waveform_data.get('time'))}")
+    
+    if not audio_id or not segments or not waveform_data or not waveform_data.get('time'):
+        print(f"[POPULATE] Returning empty - missing data")
+        return html.Div("Select an audio file from Files"), {}, "Select an audio file from Files"
     
     # Create audio player
     player = render_audio_player(audio_id)
     
     # Create initial waveform
+    time = np.array(waveform_data['time'])
+    amplitude = np.array(waveform_data['amplitude'])
     fig = render_waveform_with_highlight(time, amplitude, segments)
     
     # Display text
     display_text = f"Audio ID: {audio_id[:16]}..."
     
-    # Initial metadata (first segment)
-    if segments and len(segments) > 0:
-        metadata = render_metadata_panel(segments[0])
-    else:
-        metadata = html.Div("No segments available", style={"padding": "20px", "color": "#6b7280"})
-    
-    return (
-        audio_id,
-        segments,
-        {'time': time.tolist(), 'amplitude': amplitude.tolist()},
-        player,
-        fig,
-        display_text,
-        metadata
-    )
+    return player, fig, display_text
 
-
-# Callback 3: Persona creation
+# Persona creation callback
 @app.callback(
     Output('creation-feedback', 'children'),
     Output('persona-id-input', 'value'),
@@ -381,6 +263,7 @@ def load_audio_file(n_clicks_list, current_audio_id):
     Output('persona-emoji-input', 'value'),
     Output('persona-description-input', 'value'),
     Output('persona-prompt-input', 'value'),
+    Output('url', 'pathname'),
     Input('create-persona-button', 'n_clicks'),
     State('persona-id-input', 'value'),
     State('persona-name-input', 'value'),
@@ -391,7 +274,7 @@ def load_audio_file(n_clicks_list, current_audio_id):
 )
 def create_persona(n_clicks, persona_id, display_name, emoji, description, prompt_json):
     if not n_clicks:
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # Validate inputs
     if not persona_id or not display_name or not prompt_json:
@@ -401,7 +284,7 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
             "backgroundColor": "#fee2e2",
             "borderRadius": "6px",
             "border": "1px solid #dc2626"
-        }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # Validate persona_id format (lowercase, no spaces)
     if not persona_id.replace('_', '').isalnum() or persona_id != persona_id.lower():
@@ -411,12 +294,13 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
             "backgroundColor": "#fee2e2",
             "borderRadius": "6px",
             "border": "1px solid #dc2626"
-        }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
-    # Parse JSON
+    # Parse JSON (try to parse, but use as-is if it fails)
     try:
         parsed_prompt = json.loads(prompt_json)
     except:
+        # If not valid JSON, create a simple structure
         parsed_prompt = {
             "system": prompt_json,
             "user_template": "Evaluate: {text}"
@@ -424,14 +308,22 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
     
     # Save persona to config files
     try:
+        import os
+        print(f"DEBUG: Creating persona {persona_id} with name {display_name}")
+        
         # Add to backend config
         backend_config_path = Path("app/config/personas.py")
         dashboard_config_path = Path("dashboard/personas_config.py")
         langflow_config_path = Path("app/services/langflow_client.py")
         
+        print(f"DEBUG: Backend config path: {backend_config_path.absolute()}")
+        print(f"DEBUG: Path exists: {backend_config_path.exists()}")
+        
         # Read backend config
         with open(backend_config_path, 'r') as f:
             backend_content = f.read()
+        
+        print(f"DEBUG: Read backend config, length: {len(backend_content)}")
         
         # Create new persona entry for backend
         new_backend_entry = f'''    {{
@@ -444,11 +336,18 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
     }}'''
         
         # Insert before closing bracket
-        backend_content = backend_content.replace("\n]", f",\n{new_backend_entry}\n]")
+        backend_content = backend_content.replace(
+            "\n]",
+            f",\n{new_backend_entry}\n]"
+        )
+        
+        print(f"DEBUG: Updated backend config, new length: {len(backend_content)}")
         
         # Write backend config
+        print(f"DEBUG: Writing backend config...")
         with open(backend_config_path, 'w') as f:
             f.write(backend_content)
+        print(f"DEBUG: Backend config written successfully")
         
         # Update dashboard config
         with open(dashboard_config_path, 'r') as f:
@@ -461,7 +360,10 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
         "description": "{description or 'Custom persona'}"
     }}'''
         
-        dashboard_content = dashboard_content.replace("\n]", f",\n{new_dashboard_entry}\n]")
+        dashboard_content = dashboard_content.replace(
+            "\n]",
+            f",\n{new_dashboard_entry}\n]"
+        )
         
         with open(dashboard_config_path, 'w') as f:
             f.write(dashboard_content)
@@ -470,13 +372,19 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
         with open(langflow_config_path, 'r') as f:
             langflow_content = f.read()
         
+        # Find PERSONA_PROMPTS dict and add new entry
         new_prompt_entry = f'''    "{persona_id}_chain": {json.dumps(parsed_prompt, indent=8).replace("        ", "    ")},
 }}'''
         
-        langflow_content = langflow_content.replace("\n}", f"\n{new_prompt_entry}")
+        langflow_content = langflow_content.replace(
+            "\n}",
+            f"\n{new_prompt_entry}"
+        )
         
         with open(langflow_config_path, 'w') as f:
             f.write(langflow_content)
+        
+        print(f"DEBUG: Creating worker file...")
         
         # Create worker file
         worker_template = f'''import json
@@ -547,17 +455,20 @@ def process_transcript(audio_id, transcript_segments, classifier_results):
 '''
         
         worker_path = Path(f"app/workers/{persona_id}_worker.py")
+        print(f"DEBUG: Worker path: {worker_path.absolute()}")
         with open(worker_path, 'w') as f:
             f.write(worker_template)
+        print(f"DEBUG: Worker file created successfully at {worker_path}")
         
-        # Clear form
-        return html.Div("✅ Persona created successfully!", style={
+        # Clear form and redirect
+        print(f"DEBUG: Persona {persona_id} created successfully!")
+        return html.Div("✅ Persona created successfully! Redirecting...", style={
             "color": "#059669",
             "padding": "12px",
             "backgroundColor": "#d1fae5",
             "borderRadius": "6px",
             "border": "1px solid #059669"
-        }), "", "", "", "", ""
+        }), "", "", "", "", "", "/admin"
         
     except Exception as e:
         return html.Div(f"❌ Error creating persona: {str(e)}", style={
@@ -566,8 +477,7 @@ def process_transcript(audio_id, transcript_segments, classifier_results):
             "backgroundColor": "#fee2e2",
             "borderRadius": "6px",
             "border": "1px solid #dc2626"
-        }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
-
+        }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 # Clientside callback to update current time from audio player
 app.clientside_callback(
@@ -576,9 +486,11 @@ app.clientside_callback(
         const audioElement = document.getElementById('audio-player');
         
         if (audioElement && audioElement.currentTime !== undefined && !isNaN(audioElement.currentTime)) {
+            console.log('[CLIENTSIDE] Current time:', audioElement.currentTime);
             return audioElement.currentTime;
         }
         
+        console.log('[CLIENTSIDE] Audio element not ready or no time');
         return window.dash_clientside.no_update;
     }
     """,
@@ -613,8 +525,7 @@ app.clientside_callback(
     prevent_initial_call=True
 )
 
-
-# Callback 4: Auto-update waveform and metadata during playback (THE CORE FEATURE)
+# Callback 1: Auto-update waveform and metadata during playback
 @app.callback(
     Output("waveform-graph", "figure", allow_duplicate=True),
     Output("segment-metadata", "children", allow_duplicate=True),
@@ -623,19 +534,22 @@ app.clientside_callback(
     State("segments-store", "data"),
     State("waveform-data-store", "data"),
     State("user-clicked", "data"),
+    State("current-audio-id", "data"),
     prevent_initial_call=True
 )
-def auto_update_playback(current_time, segments, waveform_data, user_clicked):
+def auto_update_playback(current_time, segments, waveform_data, user_clicked, audio_id):
     import numpy as np
     
-    print(f"[AUTO_UPDATE] time={current_time}, segments={len(segments) if segments else 0}")
+    print(f"[AUTO_UPDATE] Called! time={current_time}, clicked={user_clicked}, has_segments={bool(segments)}, has_waveform={bool(waveform_data)}")
     
     # If user just clicked, reset flag and don't update
     if user_clicked:
+        print("[AUTO_UPDATE] User clicked, skipping")
         return dash.no_update, dash.no_update, False
     
     # Skip if no valid time or segments
-    if current_time is None or current_time < 0 or not segments or not waveform_data or not waveform_data.get('time'):
+    if current_time is None or current_time < 0 or not segments or not waveform_data:
+        print(f"[AUTO_UPDATE] Skipping - invalid data")
         return dash.no_update, dash.no_update, False
     
     # Convert waveform data back to numpy arrays
@@ -658,11 +572,10 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked):
     else:
         return fig, dash.no_update, False
 
-
-# Callback 5: Handle waveform clicks for seeking
+# Callback 2: Handle waveform clicks for seeking
 @app.callback(
-    Output("segment-metadata", "children", allow_duplicate=True),
-    Output("user-clicked", "data", allow_duplicate=True),
+    Output("segment-metadata", "children"),
+    Output("user-clicked", "data"),
     Input("waveform-graph", "clickData"),
     State("segments-store", "data"),
     prevent_initial_call=True
@@ -689,10 +602,26 @@ def handle_waveform_click(click_data, segments):
     # Set user-clicked flag
     return metadata, True
 
+# Callback 3: Initialize metadata panel on first load
+@app.callback(
+    Output("segment-metadata", "children", allow_duplicate=True),
+    Input("segments-store", "data"),
+    prevent_initial_call='initial_duplicate'
+)
+def initialize_metadata(segments):
+    if segments and len(segments) > 0:
+        return render_metadata_panel(segments[0])
+    else:
+        return html.Div(
+            "No segments available for this audio file.",
+            style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}
+        )
 
 if __name__ == "__main__":
     print(f"\n🚀 Starting dashboard server...")
-    print(f"📊 Dashboard available at: http://0.0.0.0:5000")
-    print("Press Ctrl+C to stop\n")
-    
-    app.run_server(host="0.0.0.0", port=5000, debug=True)
+    import os
+    port = int(os.getenv('PORT', 5000))
+    print(f"📁 Browse audio files at: http://localhost:{port}/files")
+    print(f"📊 Dashboard will load dynamically from Files page")
+    print(f"\nPress Ctrl+C to stop\n")
+    app.run(debug=True, host='0.0.0.0', port=port)
