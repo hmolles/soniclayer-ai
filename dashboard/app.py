@@ -46,25 +46,64 @@ def proxy_audio(audio_id):
 
 
 def create_file_sidebar():
-    """Create the left sidebar with file browser."""
+    """Create the left sidebar with clickable file browser."""
     audio_files = get_all_audio_files()
     
     if not audio_files:
-        dropdown_options = []
-        dropdown_value = None
-        file_info = html.Div("No audio files found", style={"padding": "10px", "color": "#6b7280", "fontSize": "13px"})
-    else:
-        # Create dropdown options from audio files
-        dropdown_options = [
-            {
-                "label": f"🎵 {audio['audio_id'][:16]}... ({audio['num_segments']} segments)",
-                "value": audio["audio_id"]
+        file_list = html.Div(
+            "No audio files found",
+            style={
+                "padding": "20px",
+                "color": "#6b7280",
+                "fontSize": "14px",
+                "textAlign": "center"
             }
-            for audio in audio_files
-        ]
-        dropdown_value = default_audio_id if default_audio_id else None
-        file_info = html.Div(f"{len(audio_files)} file{'s' if len(audio_files) != 1 else ''} available", 
-                            style={"padding": "10px", "color": "#6b7280", "fontSize": "13px"})
+        )
+    else:
+        # Create clickable file items - each outputs to the same hidden store
+        file_items = []
+        for i, audio in enumerate(audio_files):
+            short_id = audio["audio_id"][:12] + "..."
+            is_selected = audio["audio_id"] == default_audio_id
+            
+            item = html.Button([
+                html.Span("🎵", style={"fontSize": "20px", "marginRight": "8px"}),
+                html.Div([
+                    html.Div(short_id, style={
+                        "fontSize": "13px",
+                        "fontWeight": "600",
+                        "color": "#111827" if not is_selected else "#2563eb",
+                        "marginBottom": "2px"
+                    }),
+                    html.Div(f"{audio['num_segments']} segments", style={
+                        "fontSize": "11px",
+                        "color": "#6b7280"
+                    })
+                ], style={
+                    "flex": "1",
+                    "textAlign": "left"
+                })
+            ], 
+            id=f"file-btn-{i}",
+            n_clicks=0,
+            **{"data-audio-id": audio["audio_id"]},  # Store audio_id in data attribute
+            style={
+                "display": "flex",
+                "alignItems": "center",
+                "width": "100%",
+                "padding": "12px",
+                "marginBottom": "4px",
+                "backgroundColor": "#eff6ff" if is_selected else "#f9fafb",
+                "borderRadius": "6px",
+                "cursor": "pointer",
+                "border": "2px solid #3b82f6" if is_selected else "1px solid #e5e7eb",
+                "transition": "all 0.2s",
+                "textAlign": "left"
+            })
+            
+            file_items.append(item)
+        
+        file_list = html.Div(file_items, id="file-list-container")
     
     return html.Div([
         html.H3("📁 Audio Files", style={
@@ -72,16 +111,12 @@ def create_file_sidebar():
             "fontSize": "16px",
             "color": "#111827"
         }),
-        dcc.Dropdown(
-            id="audio-file-selector",
-            options=dropdown_options,
-            value=dropdown_value,
-            placeholder="Select an audio file...",
-            style={"marginBottom": "10px"}
-        ),
-        file_info
+        file_list,
+        html.Div(f"{len(audio_files)} file{'s' if len(audio_files) != 1 else ''} available" if audio_files else "", 
+                style={"marginTop": "10px", "padding": "10px", "color": "#6b7280", "fontSize": "12px"}),
+        dcc.Store(id="selected-audio-store", data=default_audio_id)  # Hidden store for selected file
     ], style={
-        "width": "300px",
+        "width": "280px",
         "backgroundColor": "#ffffff",
         "borderRight": "2px solid #e5e7eb",
         "padding": "20px",
@@ -187,7 +222,7 @@ app.layout = html.Div([
         dcc.Store(id='waveform-data-store', data={'time': [], 'amplitude': []}),
         dcc.Store(id='waveform-click-dummy', data=None),  # Dummy store for clientside callback
     ], style={
-        "marginLeft": "300px",  # Offset for fixed sidebar
+        "marginLeft": "280px",  # Offset for fixed sidebar
         "minHeight": "100vh"
     }),
     
@@ -256,6 +291,37 @@ def toggle_admin_modal(open_clicks, close_clicks):
         return {"display": "none"}
 
 
+# Callback 1b: Update selected audio store when file button clicked
+# Generate inputs dynamically based on actual number of files
+audio_files_for_callback = get_all_audio_files()
+num_files = len(audio_files_for_callback)
+
+@app.callback(
+    Output('selected-audio-store', 'data'),
+    [Input(f'file-btn-{i}', 'n_clicks') for i in range(num_files)] if num_files > 0 else [Input('selected-audio-store', 'data')],
+    prevent_initial_call=True
+)
+def update_selected_audio(*n_clicks_list):
+    """Update which audio file is selected based on button clicks."""
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    # Find which button was clicked
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    # Get the audio_id from the button in the layout
+    audio_files = get_all_audio_files()
+    if button_id.startswith('file-btn-'):
+        index = int(button_id.split('-')[-1])
+        if index < len(audio_files):
+            selected_id = audio_files[index]['audio_id']
+            print(f"[FILE_CLICK] User selected: {selected_id[:16]}...")
+            return selected_id
+    
+    raise PreventUpdate
+
+
 # Callback 2: Handle file selection and load data
 @app.callback(
     Output('current-audio-id', 'data'),
@@ -265,13 +331,13 @@ def toggle_admin_modal(open_clicks, close_clicks):
     Output('waveform-graph', 'figure', allow_duplicate=True),
     Output('dashboard-audio-id-display', 'children'),
     Output('segment-metadata', 'children', allow_duplicate=True),
-    Input('audio-file-selector', 'value'),
+    Input('selected-audio-store', 'data'),
     prevent_initial_call='initial_duplicate'
 )
 def load_audio_file(audio_id):
     import numpy as np
     
-    print(f"[LOAD_AUDIO] Selected audio_id: {audio_id}")
+    print(f"[LOAD_AUDIO] Loading audio_id: {audio_id}")
     
     # If no audio selected, use default
     if not audio_id:
