@@ -7,19 +7,19 @@ PERSONAS = [
     {
         "id": "genz",
         "display_name": "Gen Z",
-        "emoji": "🔥",
+        "emoji": "\ud83d\udd25",
         "description": "Gen Z listener aged 18-25"
     },
     {
         "id": "advertiser",
         "display_name": "Advertiser",
-        "emoji": "💼",
+        "emoji": "\ud83d\udcbc",
         "description": "Brand safety evaluator"
     },
     {
         "id": "business_owner",
         "display_name": "Business Owner",
-        "emoji": "🥸",
+        "emoji": "\ud83e\uddd1",
         "description": "Male business owner"
     }
 ]
