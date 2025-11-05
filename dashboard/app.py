@@ -141,6 +141,30 @@ app.clientside_callback(
     Input('playback-sync', 'n_intervals')
 )
 
+
+# Clientside callback to seek audio when waveform is clicked
+app.clientside_callback(
+    """
+    function(click_data) {
+        if (!click_data) {
+            return window.dash_clientside.no_update;
+        }
+        
+        // Get clicked time from waveform
+        const clicked_time = click_data.points[0].x;
+        
+        // Find and seek the audio element
+        const audioElement = document.getElementById('audio-player');
+        if (audioElement) {
+            audioElement.currentTime = clicked_time;
+        }
+        
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('audio-player', 'id'),  # Dummy output (we just need to trigger on click)
+    Input('waveform-graph', 'clickData')
+)
 # Callback 1: Auto-update waveform and metadata during playback
 @app.callback(
     Output("waveform-graph", "figure"),
@@ -183,7 +207,6 @@ def auto_update_playback(n_intervals, current_time, user_clicked):
 
 # Callback 2: Handle waveform clicks for seeking
 @app.callback(
-    Output("audio-player", "seekTo"),
     Output("segment-metadata", "children"),
     Output("user-clicked", "data"),
     Input("waveform-graph", "clickData"),
@@ -191,7 +214,7 @@ def auto_update_playback(n_intervals, current_time, user_clicked):
 )
 def handle_waveform_click(click_data):
     if click_data is None:
-        return dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update
     
     # Get clicked time from waveform
     clicked_time = click_data['points'][0]['x']
@@ -206,7 +229,7 @@ def handle_waveform_click(click_data):
     metadata = render_metadata_panel(active_segment) if active_segment else "No segment at this time position."
     
     # Seek player to clicked time and set user-clicked flag
-    return clicked_time, metadata, True
+    return metadata, True
 
 # Callback 3: Initialize metadata panel on first load
 @app.callback(
