@@ -240,27 +240,60 @@ button:active {
     border-color: var(--gray-400) !important;
 }
 
-/* Tabs - Clean Minimal Design */
+/* Tabs - Ultra Modern Design */
 .dash-tab {
-    border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
+    border-radius: 0 !important;
     border: none !important;
-    padding: 12px 24px !important;
+    padding: 14px 28px !important;
     font-weight: 500 !important;
-    transition: all 0.2s ease !important;
+    font-size: 15px !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     color: var(--text-secondary) !important;
     background: transparent !important;
+    position: relative !important;
+    margin: 0 4px !important;
+}
+
+.dash-tab::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 100%;
+    height: 3px;
+    background: var(--primary);
+    border-radius: 3px 3px 0 0;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dash-tab:hover {
-    background: var(--gray-100) !important;
+    background: transparent !important;
     color: var(--text-primary) !important;
 }
 
+.dash-tab:hover::after {
+    transform: translateX(-50%) scaleX(0.5);
+    opacity: 0.3;
+}
+
 .dash-tab--selected {
-    background: var(--white) !important;
+    background: transparent !important;
     color: var(--primary) !important;
-    border-bottom: 2px solid var(--primary) !important;
     font-weight: 600 !important;
+}
+
+.dash-tab--selected::after {
+    transform: translateX(-50%) scaleX(1) !important;
+    opacity: 1 !important;
+}
+
+/* Tab Container - Clean Styling */
+.dash-tabs {
+    border-bottom: 1px solid var(--gray-200) !important;
+    background: var(--white) !important;
+    margin-bottom: var(--spacing-md) !important;
+    box-shadow: var(--shadow-xs) !important;
 }
 
 /* Summary Panel - Ultra Clean Card */
