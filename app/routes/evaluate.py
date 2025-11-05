@@ -6,7 +6,8 @@ from fastapi import APIRouter, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from rq import Queue
 from app.services.langflow_client import call_langflow_chain
-from app.services.transcryption import transcribe_audio, transcribe_audio_with_timestamps
+from app.services.transcryption import transcribe_audio, transcribe_audio_with_timestamps, transcribe_chunked_audio
+from app.services.media_processor import process_large_audio
 from app.services.classifier import classify_segment
 from app.services.cache import redis_conn
 from app.utils.hashing import generate_audio_hash
