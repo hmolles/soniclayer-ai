@@ -7,6 +7,7 @@ from components.waveform import render_waveform_with_highlight
 from components.audio_player import render_audio_player
 from components.metadata_panel import render_metadata_panel
 from components.admin_page import render_admin_page
+from components.summary_panel import render_collapsible_summary, render_detailed_summary
 from services.audio_utils import extract_waveform
 from services.api_client import fetch_segments
 from utils.audio_scanner import get_all_audio_files
@@ -230,6 +231,12 @@ app.layout = html.Div([
                 html.Div([
                     # Left column - Waveform and audio player
                     html.Div([
+                        # Collapsible summary panel (Phase 3)
+                        html.Div(id="summary-panel-container", children=html.Div(
+                            "Loading summary...",
+                            style={"padding": "16px", "color": "#6b7280", "fontStyle": "italic"}
+                        )),
+                        
                         html.Div(id="audio-player-container", children=html.Div(
                             "Select an audio file to begin",
                             style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}
@@ -287,6 +294,8 @@ app.layout = html.Div([
         dcc.Store(id='segments-store', data=[]),
         dcc.Store(id='waveform-data-store', data={'time': [], 'amplitude': []}),
         dcc.Store(id='waveform-click-dummy', data=None),  # Dummy store for clientside callback
+        dcc.Store(id='summary-data-store', data=None),  # Store for summary data (Phase 3)
+        dcc.Store(id='summary-collapsed', data=False),  # Store for collapse state
     ], style={
         "marginLeft": "280px",  # Offset for fixed sidebar
         "minHeight": "100vh"
@@ -1353,257 +1362,114 @@ def handle_waveform_click(click_data, segments):
     return metadata, True
 
 
-# Callback 6: Populate Summary Tab
+# ============================================================================
+# PHASE 3 CALLBACKS: Collapsible Summary Panel on Main Dashboard
+# ============================================================================
+
+# Callback 6.1: Fetch summary data when audio changes (Phase 3)
 @app.callback(
-    Output("summary-content", "children"),
-    Input("current-audio-id", "data"),
+    Output('summary-data-store', 'data'),
+    Input('current-audio-id', 'data'),
     prevent_initial_call=False
 )
-def update_summary_tab(audio_id):
-    """Generate summary statistics visualization for selected audio file."""
+def fetch_summary_data(audio_id):
+    """Fetch summary when audio changes."""
     import requests
-    import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
     
     if not audio_id:
+        return None
+    
+    try:
+        response = requests.get(f"http://localhost:8000/summary/{audio_id}", timeout=5)
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        print(f"Error fetching summary for {audio_id}: {e}")
+    
+    return None
+
+
+# Callback 6.2: Update summary panel when data is available (Phase 3)
+@app.callback(
+    Output('summary-panel-container', 'children'),
+    Input('summary-data-store', 'data'),
+    State('summary-collapsed', 'data'),
+    prevent_initial_call=False
+)
+def update_summary_panel(summary_data, is_collapsed):
+    """Render collapsible summary panel on main dashboard."""
+    personas = get_all_personas()
+    
+    if not summary_data:
+        return html.Div(
+            "Summary loading...",
+            style={"padding": "16px", "color": "#6b7280", "fontStyle": "italic"}
+        )
+    
+    # Use the summary_panel component to render
+    return render_collapsible_summary(personas, summary_data, is_expanded=not is_collapsed)
+
+
+# Callback 6.3: Toggle summary collapse state (Phase 3)
+@app.callback(
+    Output('summary-collapsed', 'data'),
+    Output('summary-collapse-content', 'style'),
+    Output('summary-collapse-toggle', 'children'),
+    Input('summary-collapse-toggle', 'n_clicks'),
+    State('summary-collapsed', 'data'),
+    State('summary-data-store', 'data'),
+    prevent_initial_call=True
+)
+def toggle_summary_collapse(n_clicks, is_collapsed, summary_data):
+    """Toggle the collapse state of the summary panel."""
+    if summary_data is None:
+        raise PreventUpdate
+    
+    # Toggle state
+    new_collapsed = not is_collapsed
+    num_segments = summary_data.get("num_segments", 0)
+    
+    # Update display style
+    display_style = {
+        "padding": "16px",
+        "backgroundColor": "#ffffff",
+        "borderRadius": "0 0 8px 8px",
+        "border": "1px solid #e5e7eb",
+        "borderTop": "none",
+        "display": "none" if new_collapsed else "block"
+    }
+    
+    # Update button text
+    button_children = [
+        html.Span("▶" if new_collapsed else "▼", style={"marginRight": "8px"}),
+        html.Span(f"📊 Summary ({num_segments} segments)", style={"fontWeight": "600"})
+    ]
+    
+    return new_collapsed, display_style, button_children
+
+
+# ============================================================================
+# PHASE 4 CALLBACK: Summary Tab
+# ============================================================================
+
+# Callback 7: Populate Summary Tab (Phase 4)
+@app.callback(
+    Output("summary-content", "children"),
+    Input("summary-data-store", "data"),
+    prevent_initial_call=False
+)
+def update_summary_tab(summary_data):
+    """Generate summary statistics visualization for Summary Tab."""
+    personas = get_all_personas()
+    
+    if not summary_data:
         return html.Div(
             "Select an audio file to view summary",
             style={"padding": "40px", "color": "#6b7280", "textAlign": "center", "fontSize": "16px"}
         )
     
-    # Fetch summary data from backend
-    try:
-        response = requests.get(f"http://localhost:8000/summary/{audio_id}", timeout=5)
-        if response.status_code != 200:
-            return html.Div(
-                f"Summary data not available for this audio file",
-                style={"padding": "40px", "color": "#ef4444", "textAlign": "center"}
-            )
-        
-        summary = response.json()
-        personas_data = summary.get("personas", {})
-        num_segments = summary.get("num_segments", 0)
-        
-    except Exception as e:
-        return html.Div(
-            f"Error loading summary: {str(e)}",
-            style={"padding": "40px", "color": "#ef4444", "textAlign": "center"}
-        )
-    
-    # Get personas for display info
-    personas = get_all_personas()
-    persona_lookup = {p["id"]: p for p in personas}
-    
-    # Create persona cards
-    persona_cards = []
-    
-    for persona in personas:
-        persona_id = persona["id"]
-        if persona_id not in personas_data:
-            continue
-        
-        stats = personas_data[persona_id]
-        avg_score = stats.get("avg_score", 0)
-        avg_confidence = stats.get("avg_confidence", 0)
-        score_dist = stats.get("score_distribution", {})
-        top_segments = stats.get("top_segments", [])
-        worst_segments = stats.get("worst_segments", [])
-        
-        # Create score distribution bar chart
-        fig = go.Figure(data=[
-            go.Bar(
-                x=["1⭐", "2⭐", "3⭐", "4⭐", "5⭐"],
-                y=[score_dist.get(str(i), 0) for i in range(1, 6)],
-                marker_color=[get_score_color(i) for i in range(1, 6)],
-                text=[score_dist.get(str(i), 0) for i in range(1, 6)],
-                textposition='auto',
-            )
-        ])
-        
-        fig.update_layout(
-            title=None,
-            xaxis_title="Score",
-            yaxis_title="Count",
-            height=200,
-            margin=dict(l=40, r=20, t=20, b=40),
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor='#e5e7eb')
-        )
-        
-        # Create persona card
-        card = html.Div([
-            # Card header
-            html.Div([
-                html.Span(persona["emoji"], style={"fontSize": "32px", "marginRight": "12px"}),
-                html.Div([
-                    html.H3(persona["display_name"], style={
-                        "margin": "0",
-                        "fontSize": "18px",
-                        "color": "#111827"
-                    }),
-                    html.P(persona["description"], style={
-                        "margin": "4px 0 0 0",
-                        "fontSize": "13px",
-                        "color": "#6b7280"
-                    })
-                ], style={"flex": "1"})
-            ], style={
-                "display": "flex",
-                "alignItems": "center",
-                "marginBottom": "16px",
-                "paddingBottom": "16px",
-                "borderBottom": "2px solid #e5e7eb"
-            }),
-            
-            # Metrics row
-            html.Div([
-                # Average score
-                html.Div([
-                    html.Div("Average Score", style={
-                        "fontSize": "12px",
-                        "color": "#6b7280",
-                        "marginBottom": "4px"
-                    }),
-                    html.Div(f"{avg_score:.1f} / 5.0", style={
-                        "fontSize": "24px",
-                        "fontWeight": "700",
-                        "color": get_score_color(avg_score)
-                    })
-                ], style={
-                    "flex": "1",
-                    "padding": "12px",
-                    "backgroundColor": "#f9fafb",
-                    "borderRadius": "6px",
-                    "marginRight": "8px"
-                }),
-                
-                # Confidence
-                html.Div([
-                    html.Div("Confidence", style={
-                        "fontSize": "12px",
-                        "color": "#6b7280",
-                        "marginBottom": "4px"
-                    }),
-                    html.Div(f"{avg_confidence*100:.0f}%", style={
-                        "fontSize": "24px",
-                        "fontWeight": "700",
-                        "color": "#3b82f6"
-                    })
-                ], style={
-                    "flex": "1",
-                    "padding": "12px",
-                    "backgroundColor": "#f9fafb",
-                    "borderRadius": "6px"
-                })
-            ], style={
-                "display": "flex",
-                "marginBottom": "16px"
-            }),
-            
-            # Score distribution chart
-            html.Div([
-                html.H4("Score Distribution", style={
-                    "margin": "0 0 8px 0",
-                    "fontSize": "14px",
-                    "color": "#111827"
-                }),
-                dcc.Graph(figure=fig, config={'displayModeBar': False})
-            ], style={"marginBottom": "16px"}),
-            
-            # Top & Worst segments
-            html.Div([
-                # Top segments
-                html.Div([
-                    html.H4("🏆 Top Segments", style={
-                        "margin": "0 0 8px 0",
-                        "fontSize": "14px",
-                        "color": "#10b981"
-                    }),
-                    html.Div([
-                        html.Span(f"#{seg}", style={
-                            "display": "inline-block",
-                            "padding": "4px 8px",
-                            "marginRight": "4px",
-                            "marginBottom": "4px",
-                            "backgroundColor": "#10b98120",
-                            "color": "#10b981",
-                            "borderRadius": "4px",
-                            "fontSize": "12px",
-                            "fontWeight": "600"
-                        }) for seg in top_segments
-                    ])
-                ], style={
-                    "flex": "1",
-                    "marginRight": "8px",
-                    "padding": "12px",
-                    "backgroundColor": "#f0fdf4",
-                    "borderRadius": "6px",
-                    "border": "1px solid #10b98140"
-                }),
-                
-                # Worst segments
-                html.Div([
-                    html.H4("⚠️ Worst Segments", style={
-                        "margin": "0 0 8px 0",
-                        "fontSize": "14px",
-                        "color": "#ef4444"
-                    }),
-                    html.Div([
-                        html.Span(f"#{seg}", style={
-                            "display": "inline-block",
-                            "padding": "4px 8px",
-                            "marginRight": "4px",
-                            "marginBottom": "4px",
-                            "backgroundColor": "#ef444420",
-                            "color": "#ef4444",
-                            "borderRadius": "4px",
-                            "fontSize": "12px",
-                            "fontWeight": "600"
-                        }) for seg in worst_segments
-                    ])
-                ], style={
-                    "flex": "1",
-                    "padding": "12px",
-                    "backgroundColor": "#fef2f2",
-                    "borderRadius": "6px",
-                    "border": "1px solid #ef444440"
-                })
-            ], style={
-                "display": "flex"
-            })
-            
-        ], style={
-            "backgroundColor": "#ffffff",
-            "borderRadius": "8px",
-            "padding": "20px",
-            "marginBottom": "16px",
-            "border": "1px solid #e5e7eb",
-            "boxShadow": "0 1px 3px rgba(0,0,0,0.1)"
-        })
-        
-        persona_cards.append(card)
-    
-    # Header with overview
-    header = html.Div([
-        html.H2(f"📊 Summary for Audio: {audio_id[:16]}...", style={
-            "margin": "0 0 8px 0",
-            "fontSize": "24px",
-            "color": "#111827"
-        }),
-        html.P(f"Total Segments: {num_segments}", style={
-            "margin": "0",
-            "fontSize": "14px",
-            "color": "#6b7280"
-        })
-    ], style={
-        "marginBottom": "24px",
-        "paddingBottom": "16px",
-        "borderBottom": "2px solid #e5e7eb"
-    })
-    
-    return html.Div([header] + persona_cards)
+    # Use the summary_panel component to render detailed summary
+    return render_detailed_summary(personas, summary_data)
 
 
 if __name__ == "__main__":
