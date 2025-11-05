@@ -63,6 +63,21 @@ To run the full application on your local machine:
 See `README.md` and `QUICK_START.md` for detailed instructions.
 
 ## Recent Changes (November 2025)
+- **✅ Three-Tier Hybrid Summary System** - Multi-level summary aggregation (November 5, 2025)
+  - **Tier 1: File Browser Badges** - Color-coded persona score badges on each audio file
+  - **Tier 2: Collapsible Summary Panel** - Quick overview on Analysis tab (above waveform)
+    - Toggle to show/hide aggregated persona scores
+    - Color-coded ratings (Green 4.0+, Blue 3.0-3.9, Orange 2.0-2.9, Red <2.0)
+    - One-click access to detailed statistics
+  - **Tier 3: Summary Tab** - Comprehensive analytics with visualizations
+    - Score distribution charts for each persona
+    - Top & worst performing segments
+    - Confidence metrics
+  - **Performance Optimization:**
+    - Backend `/summary/{audio_id}` endpoint with Redis caching (24-hour TTL)
+    - 5x speedup: uncached 18ms → cached 3.6ms
+    - Fetched once per audio scan (eliminates redundant HTTP calls)
+    - Component architecture via `dashboard/components/summary_panel.py`
 - **✅ Clickable Sidebar File Browser** - Single-page design with intuitive file selection
   - Beautiful card-based file browser in left sidebar
   - Click any audio file to instantly load its analysis
