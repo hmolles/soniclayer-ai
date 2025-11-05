@@ -51,9 +51,24 @@ def proxy_audio(audio_id):
         return Response(f"Error fetching audio: {str(e)}", status=500)
 
 
+def get_score_color(score):
+    """Get color for score badge based on value."""
+    if score >= 4.0:
+        return "#10b981"  # Green - Excellent
+    elif score >= 3.0:
+        return "#3b82f6"  # Blue - Good
+    elif score >= 2.0:
+        return "#f59e0b"  # Orange - Moderate
+    else:
+        return "#ef4444"  # Red - Low
+
+
 def create_file_sidebar():
     """Create the left sidebar with clickable file browser."""
+    import requests
+    
     audio_files = get_all_audio_files()
+    personas = get_all_personas()
     
     if not audio_files:
         file_list = html.Div(
@@ -72,6 +87,38 @@ def create_file_sidebar():
             short_id = audio["audio_id"][:12] + "..."
             is_selected = audio["audio_id"] == default_audio_id
             
+            # Fetch summary data for this audio file
+            summary_badges = []
+            try:
+                response = requests.get(f"http://localhost:8000/summary/{audio['audio_id']}", timeout=2)
+                if response.status_code == 200:
+                    summary_data = response.json()
+                    
+                    # Create compact badges for each persona
+                    for persona in personas:
+                        persona_id = persona["id"]
+                        if persona_id in summary_data.get("personas", {}):
+                            persona_stats = summary_data["personas"][persona_id]
+                            avg_score = persona_stats.get("avg_score", 0)
+                            
+                            badge = html.Span([
+                                html.Span(persona["emoji"], style={"marginRight": "2px"}),
+                                html.Span(f"{avg_score:.1f}", style={"fontWeight": "600"})
+                            ], style={
+                                "display": "inline-block",
+                                "padding": "2px 6px",
+                                "marginRight": "4px",
+                                "fontSize": "10px",
+                                "borderRadius": "4px",
+                                "backgroundColor": get_score_color(avg_score) + "20",
+                                "color": get_score_color(avg_score),
+                                "border": f"1px solid {get_score_color(avg_score)}40"
+                            })
+                            summary_badges.append(badge)
+            except Exception as e:
+                # Silently fail if summary not available
+                pass
+            
             item = html.Button([
                 html.Span("🎵", style={"fontSize": "20px", "marginRight": "8px"}),
                 html.Div([
@@ -83,8 +130,14 @@ def create_file_sidebar():
                     }),
                     html.Div(f"{audio['num_segments']} segments", style={
                         "fontSize": "11px",
-                        "color": "#6b7280"
-                    })
+                        "color": "#6b7280",
+                        "marginBottom": "4px" if summary_badges else "0"
+                    }),
+                    html.Div(summary_badges, style={
+                        "display": "flex",
+                        "flexWrap": "wrap",
+                        "gap": "2px"
+                    }) if summary_badges else None
                 ], style={
                     "flex": "1",
                     "textAlign": "left"
