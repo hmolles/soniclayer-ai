@@ -106,7 +106,8 @@ def render_dashboard_page(audio_id):
                 dcc.Graph(
                     id="waveform-graph",
                     figure=render_waveform_with_highlight(time, amplitude, segments),
-                    style={"height": "400px"}
+                    style={"height": "400px"},
+                    config={'displayModeBar': False}
                 ),
             ], style={
                 "flex": "1",
@@ -160,7 +161,6 @@ app.layout = html.Div([
 )
 def display_page(pathname, search):
     """Route to the appropriate page based on pathname and query parameters"""
-    print(f"[ROUTING] pathname={pathname}, search={search}")
     
     # Handle URL-encoded query strings in pathname (screenshot tool quirk)
     if '%3F' in pathname or '?' in pathname:
@@ -174,8 +174,6 @@ def display_page(pathname, search):
             if '?' in pathname:
                 pathname, search = pathname.split('?', 1)
                 search = '?' + search
-    
-    print(f"[ROUTING FIXED] pathname={pathname}, search={search}")
     
     if pathname == '/admin':
         # Admin page
@@ -521,28 +519,25 @@ app.clientside_callback(
 
 # Callback 1: Auto-update waveform and metadata during playback
 @app.callback(
-    Output("waveform-graph", "figure"),
+    Output("waveform-graph", "figure", allow_duplicate=True),
     Output("segment-metadata", "children", allow_duplicate=True),
     Output("user-clicked", "data", allow_duplicate=True),
     Input('current-time-store', 'data'),
     State("segments-store", "data"),
     State("waveform-data-store", "data"),
     State("user-clicked", "data"),
+    State("current-audio-id", "data"),
     prevent_initial_call=True
 )
-def auto_update_playback(current_time, segments, waveform_data, user_clicked):
+def auto_update_playback(current_time, segments, waveform_data, user_clicked, audio_id):
     import numpy as np
-    
-    print(f"[PLAYBACK] current_time={current_time}, user_clicked={user_clicked}, has_segments={bool(segments)}, has_waveform={bool(waveform_data)}")
     
     # If user just clicked, reset flag and don't update
     if user_clicked:
-        print("[PLAYBACK] User just clicked, skipping update")
         return dash.no_update, dash.no_update, False
     
     # Skip if no valid time or segments
     if current_time is None or current_time < 0 or not segments or not waveform_data:
-        print(f"[PLAYBACK] Skipping - invalid data")
         return dash.no_update, dash.no_update, False
     
     # Convert waveform data back to numpy arrays
@@ -555,19 +550,14 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked):
         None
     )
     
-    print(f"[PLAYBACK] Found segment: {active_segment['start'] if active_segment else 'None'}-{active_segment['end'] if active_segment else 'None'}")
-    
     # Update waveform with cursor
     fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time)
-    print(f"[PLAYBACK] Redrawing waveform with cursor at {current_time}s")
     
     # Update metadata
     if active_segment:
         metadata = render_metadata_panel(active_segment)
-        print(f"[PLAYBACK] Updating metadata for segment")
         return fig, metadata, False
     else:
-        print(f"[PLAYBACK] No active segment, updating waveform only")
         return fig, dash.no_update, False
 
 # Callback 2: Handle waveform clicks for seeking
@@ -607,7 +597,6 @@ def handle_waveform_click(click_data, segments):
     prevent_initial_call='initial_duplicate'
 )
 def initialize_metadata(segments):
-    print(f"[INIT] Initializing metadata with {len(segments) if segments else 0} segments")
     if segments and len(segments) > 0:
         return render_metadata_panel(segments[0])
     else:
