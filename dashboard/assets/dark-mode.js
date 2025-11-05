@@ -28,7 +28,6 @@
         'rgb(100, 116, 139)': 'rgb(160, 174, 192)',
         
         // Keep functional colors (success, error, etc.)
-        // These should remain the same or be slightly adjusted
         '#3b82f6': '#42A5F5',  // Blue - slightly brighter
         '#10b981': '#10b981',  // Green - keep same
         '#ef4444': '#ef4444',  // Red - keep same
@@ -120,7 +119,10 @@
         });
         
         console.log('[Dark Mode] Swapped colors in', elements.length, 'elements');
-        isSwapping = false;
+        
+        setTimeout(() => {
+            isSwapping = false;
+        }, 100);
     }
     
     // Helper function to convert RGB to hex
@@ -143,32 +145,41 @@
         swapInlineColors(false);
     }
     
-    // Setup mutation observer to re-apply colors when DOM changes
+    // Setup mutation observer to re-apply colors when NEW elements are added
     function setupObserver() {
         if (observer) {
             observer.disconnect();
         }
         
         observer = new MutationObserver(function(mutations) {
-            if (isSwapping) return; // Don't react to our own changes
+            if (isSwapping) return; // Don't react while we're swapping
             
             const isDark = document.body.classList.contains('dark-mode');
-            if (isDark) {
-                // Wait a bit to batch multiple mutations
+            if (!isDark) return; // Only auto-apply in dark mode
+            
+            // Only react to new child nodes being added, not style changes
+            let hasNewNodes = false;
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    hasNewNodes = true;
+                    break;
+                }
+            }
+            
+            if (hasNewNodes) {
+                // Debounce to batch multiple mutations
                 setTimeout(() => {
-                    if (!isSwapping) {
+                    if (!isSwapping && document.body.classList.contains('dark-mode')) {
                         swapInlineColors(true);
                     }
-                }, 50);
+                }, 100);
             }
         });
         
-        // Observe the entire document for changes
+        // Only observe child list changes, NOT attribute changes
         observer.observe(document.body, {
             childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style']
+            subtree: true
         });
     }
     
@@ -204,7 +215,7 @@
         const wasDark = document.body.classList.contains('dark-mode');
         const isDark = !wasDark;
         
-        // Temporarily disconnect observer to prevent loops
+        // Temporarily disable observer during toggle
         if (observer) {
             observer.disconnect();
         }
@@ -212,14 +223,9 @@
         // Toggle class
         if (isDark) {
             document.body.classList.add('dark-mode');
-        } else {
-            document.body.classList.remove('dark-mode');
-        }
-        
-        // Swap inline colors
-        if (isDark) {
             applyDarkModeColors();
         } else {
+            document.body.classList.remove('dark-mode');
             applyLightModeColors();
         }
         
@@ -228,10 +234,15 @@
         
         console.log('[Dark Mode] Toggled to:', isDark ? 'dark' : 'light');
         
-        // Reconnect observer after a short delay
+        // Reconnect observer after swapping is complete
         setTimeout(() => {
-            setupObserver();
-        }, 200);
+            if (!isSwapping) {
+                setupObserver();
+            } else {
+                // If still swapping, wait a bit more
+                setTimeout(() => setupObserver(), 200);
+            }
+        }, 300);
     }
     
     // Initialize when DOM is ready
