@@ -517,23 +517,31 @@ app.clientside_callback(
     prevent_initial_call=True
 )
 
-# Callback 1: Auto-update metadata during playback
+# Callback 1: Auto-update waveform and metadata during playback
 @app.callback(
+    Output("waveform-graph", "figure"),
     Output("segment-metadata", "children", allow_duplicate=True),
     Output("user-clicked", "data", allow_duplicate=True),
     Input('current-time-store', 'data'),
     State("segments-store", "data"),
+    State("waveform-data-store", "data"),
     State("user-clicked", "data"),
     prevent_initial_call=True
 )
-def auto_update_metadata(current_time, segments, user_clicked):
+def auto_update_playback(current_time, segments, waveform_data, user_clicked):
+    import numpy as np
+    
     # If user just clicked, reset flag and don't update
     if user_clicked:
-        return dash.no_update, False
+        return dash.no_update, dash.no_update, False
     
     # Skip if no valid time or segments
-    if current_time is None or current_time < 0 or not segments:
-        return dash.no_update, False
+    if current_time is None or current_time < 0 or not segments or not waveform_data:
+        return dash.no_update, dash.no_update, False
+    
+    # Convert waveform data back to numpy arrays
+    time = np.array(waveform_data['time'])
+    amplitude = np.array(waveform_data['amplitude'])
     
     # Find active segment
     active_segment = next(
@@ -541,12 +549,15 @@ def auto_update_metadata(current_time, segments, user_clicked):
         None
     )
     
+    # Update waveform with cursor
+    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time)
+    
     # Update metadata
     if active_segment:
         metadata = render_metadata_panel(active_segment)
-        return metadata, False
+        return fig, metadata, False
     else:
-        return dash.no_update, False
+        return fig, dash.no_update, False
 
 # Callback 2: Handle waveform clicks for seeking
 @app.callback(
