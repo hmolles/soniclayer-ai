@@ -63,17 +63,22 @@ To run the full application on your local machine:
 See `README.md` and `QUICK_START.md` for detailed instructions.
 
 ## Recent Changes (November 2025)
-- **✅ Dark Mode Support** - Clean dark theme with toggle button (November 5, 2025)
+- **✅ Dark Mode Support** - Fully functional dark theme with dynamic color swapping (November 5, 2025)
   - **Modern toggle button** with sun/moon emoji (☀️/🌙) in header
   - **Persistent preference** saved in browser localStorage
-  - **Smooth transitions** between light and dark modes
+  - **Dynamic inline style replacement** - JavaScript automatically swaps all hardcoded colors when toggling
+  - **MutationObserver** ensures dark mode persists even when Dash re-renders components
   - **Dark theme colors:**
     - Deep blue-gray backgrounds (#0F1419, #1A1F26)
     - Bright, readable text (#F7FAFC, #A0AEC0)
     - Adjusted shadows for dark backgrounds
-    - Brighter accent colors for better contrast
+    - Brighter accent colors for better contrast (#42A5F5)
+  - **Comprehensive coverage** - All 50+ hardcoded inline styles are dynamically swapped
   - **Easy to read** with carefully tuned contrast ratios
-  - **All components** support dark mode seamlessly
+  - **Implementation:**
+    - CSS variables for theme-aware styling
+    - JavaScript color mapping system (dashboard/assets/dark-mode.js)
+    - Aggressive CSS overrides (dashboard/assets/style.css)
 
 - **✅ Modern Clean UI Design** - Complete redesign inspired by contemporary apps (November 5, 2025)
   - **Clean, minimal aesthetic** with light color scheme and soft shadows
