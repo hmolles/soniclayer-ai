@@ -19,7 +19,10 @@ def get_audio_summary_mini(audio_id: str) -> dict:
             "advertiser": {"avg_score": 4.2, "emoji": "💼"}
         }
     """
-    from dashboard.personas_config import get_all_personas
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from personas_config import get_all_personas
     
     try:
         response = requests.get(f"http://localhost:8000/summary/{audio_id}", timeout=2)
