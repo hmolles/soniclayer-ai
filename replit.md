@@ -63,6 +63,18 @@ To run the full application on your local machine:
 See `README.md` and `QUICK_START.md` for detailed instructions.
 
 ## Recent Changes (November 2025)
+- **✅ Dark Mode Support** - Clean dark theme with toggle button (November 5, 2025)
+  - **Modern toggle button** with sun/moon emoji (☀️/🌙) in header
+  - **Persistent preference** saved in browser localStorage
+  - **Smooth transitions** between light and dark modes
+  - **Dark theme colors:**
+    - Deep blue-gray backgrounds (#0F1419, #1A1F26)
+    - Bright, readable text (#F7FAFC, #A0AEC0)
+    - Adjusted shadows for dark backgrounds
+    - Brighter accent colors for better contrast
+  - **Easy to read** with carefully tuned contrast ratios
+  - **All components** support dark mode seamlessly
+
 - **✅ Modern Clean UI Design** - Complete redesign inspired by contemporary apps (November 5, 2025)
   - **Clean, minimal aesthetic** with light color scheme and soft shadows
   - **Very rounded corners** (16-24px) on all cards and elements
@@ -75,6 +87,7 @@ See `README.md` and `QUICK_START.md` for detailed instructions.
   - **Responsive design** with mobile-friendly breakpoints
   - **Clean scrollbars** with custom styling
   - **Minimal borders** and cleaner visual hierarchy
+  - **Ultra-modern tabs** with animated underline indicators
   
 - **✅ Three-Tier Hybrid Summary System** - Multi-level summary aggregation (November 5, 2025)
   - **Tier 1: File Browser Badges** - Color-coded persona score badges on each audio file

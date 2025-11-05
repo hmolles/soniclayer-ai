@@ -212,8 +212,15 @@ app.layout = html.Div([
                 "display": "flex",
                 "alignItems": "center"
             }),
-            # Right section - admin button
+            # Right section - dark mode toggle and admin button
             html.Div([
+                html.Button(
+                    id="dark-mode-toggle",
+                    n_clicks=0,
+                    style={
+                        "marginRight": "8px"
+                    }
+                ),
                 html.Button("Admin", id="admin-toggle-btn", n_clicks=0, style={
                     "padding": "6px 12px",
                     "borderRadius": "4px",
@@ -225,7 +232,7 @@ app.layout = html.Div([
                     "cursor": "pointer",
                     "transition": "all 0.15s ease"
                 })
-            ])
+            ], style={"display": "flex", "alignItems": "center"})
         ], style={
             "display": "flex",
             "justifyContent": "space-between",
