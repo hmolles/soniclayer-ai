@@ -547,6 +547,160 @@ def handle_edit_buttons(edit_clicks, cancel_clicks):
     raise PreventUpdate
 
 
+# Callback 8: Handle Save button clicks to persist persona changes
+@app.callback(
+    Output('editing-persona-id', 'data', allow_duplicate=True),
+    Input({'type': 'save-persona-btn', 'id': ALL}, 'n_clicks'),
+    State({'type': 'edit-name', 'id': ALL}, 'value'),
+    State({'type': 'edit-emoji', 'id': ALL}, 'value'),
+    State({'type': 'edit-description', 'id': ALL}, 'value'),
+    State({'type': 'edit-system-prompt', 'id': ALL}, 'value'),
+    State({'type': 'edit-user-template', 'id': ALL}, 'value'),
+    prevent_initial_call=True
+)
+def save_persona_changes(save_clicks, names, emojis, descriptions, system_prompts, user_templates):
+    """Save persona changes to configuration files."""
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    
+    triggered_id = ctx.triggered[0]['prop_id']
+    
+    if 'save-persona-btn' not in triggered_id:
+        raise PreventUpdate
+    
+    # Parse which persona was saved
+    import json as json_module
+    id_str = triggered_id.split('.')[0]
+    id_dict = json_module.loads(id_str)
+    persona_id = id_dict['id']
+    
+    # Find the index of this persona in the ALL arrays
+    # The index corresponds to the order personas appear in the cards
+    personas = get_all_personas()
+    persona_index = next((i for i, p in enumerate(personas) if p['id'] == persona_id), None)
+    
+    if persona_index is None:
+        print(f"[SAVE] Error: Could not find persona {persona_id}")
+        raise PreventUpdate
+    
+    # Get the values for this specific persona
+    new_name = names[persona_index] if persona_index < len(names) else ""
+    new_emoji = emojis[persona_index] if persona_index < len(emojis) else ""
+    new_description = descriptions[persona_index] if persona_index < len(descriptions) else ""
+    new_system_prompt = system_prompts[persona_index] if persona_index < len(system_prompts) else ""
+    new_user_template = user_templates[persona_index] if persona_index < len(user_templates) else ""
+    
+    print(f"[SAVE] Saving changes for persona: {persona_id}")
+    print(f"  Name: {new_name}")
+    print(f"  Emoji: {new_emoji}")
+    
+    try:
+        # Update personas_config.py
+        personas_config_path = Path(__file__).parent / "personas_config.py"
+        personas_content = personas_config_path.read_text()
+        
+        # Find and update this persona in the PERSONAS list
+        # We'll do a simple find-replace approach
+        personas_list = get_all_personas()
+        new_personas_list = []
+        
+        for p in personas_list:
+            if p['id'] == persona_id:
+                # Update this persona
+                new_personas_list.append({
+                    "id": persona_id,
+                    "display_name": new_name,
+                    "emoji": new_emoji,
+                    "description": new_description
+                })
+            else:
+                # Keep as is
+                new_personas_list.append(p)
+        
+        # Rewrite the personas_config.py file
+        new_config_content = f'''"""
+Persona configuration for dashboard.
+This mirrors the configuration in app/config/personas.py
+"""
+
+PERSONAS = {json.dumps(new_personas_list, indent=4)}
+
+def get_all_personas():
+    """Get all persona configurations"""
+    return PERSONAS
+'''
+        personas_config_path.write_text(new_config_content)
+        print(f"[SAVE] Updated personas_config.py")
+        
+        # Update langflow_client.py
+        langflow_path = Path(__file__).parent.parent / "app" / "services" / "langflow_client.py"
+        langflow_content = langflow_path.read_text()
+        
+        # Update the PERSONA_PROMPTS dictionary for this chain
+        chain_name = f"{persona_id}_chain"
+        
+        # Read current PERSONA_PROMPTS
+        import re
+        
+        # Find the chain in the file and replace it
+        pattern = rf'"{chain_name}":\s*{{[^}}]*"system":\s*"[^"]*"[^}}]*"user_template":\s*"""[^"""]*"""[^}}]*}}'
+        
+        # Create the new chain content
+        new_chain = f'''"{chain_name}": {{
+        "system": {json.dumps(new_system_prompt)},
+        "user_template": {json.dumps(new_user_template)}
+    }}'''
+        
+        # Try to replace using regex
+        new_langflow_content = re.sub(pattern, new_chain, langflow_content, flags=re.DOTALL)
+        
+        # If regex didn't match, try a simpler approach
+        if new_langflow_content == langflow_content:
+            # Manual replacement - find the chain and replace it
+            # This is more robust for multi-line strings
+            start_marker = f'"{chain_name}":'
+            if start_marker in langflow_content:
+                # Find start and end of this chain
+                start_idx = langflow_content.find(start_marker)
+                # Find the next chain or closing brace
+                rest = langflow_content[start_idx:]
+                # Count braces to find the end
+                brace_count = 0
+                end_idx = start_idx
+                in_chain = False
+                for i, char in enumerate(rest):
+                    if char == '{':
+                        brace_count += 1
+                        in_chain = True
+                    elif char == '}':
+                        brace_count -= 1
+                        if in_chain and brace_count == 0:
+                            end_idx = start_idx + i + 1
+                            break
+                
+                # Replace this section
+                new_langflow_content = (
+                    langflow_content[:start_idx] +
+                    new_chain +
+                    langflow_content[end_idx:]
+                )
+        
+        langflow_path.write_text(new_langflow_content)
+        print(f"[SAVE] Updated langflow_client.py")
+        
+        # Success! Close the edit mode
+        print(f"[SAVE] ✅ Successfully saved persona: {persona_id}")
+        return None  # This closes the edit form
+        
+    except Exception as e:
+        print(f"[SAVE] ❌ Error saving persona: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Don't close the form if there was an error
+        raise PreventUpdate
+
+
 # Callback 1b: Update selected audio store when file button clicked
 # Generate inputs dynamically based on actual number of files
 audio_files_for_callback = get_all_audio_files()
