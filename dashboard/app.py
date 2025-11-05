@@ -125,16 +125,13 @@ app.layout = html.Div([
 app.clientside_callback(
     """
     function(n_intervals) {
-        // Find the audio element
         const audioElement = document.getElementById('audio-player');
         
-        // If audio element exists and is playing, return current time
-        if (audioElement && !audioElement.paused) {
+        if (audioElement && audioElement.currentTime !== undefined) {
             return audioElement.currentTime;
         }
         
-        // If paused or not found, return current value (no update)
-        return window.dash_clientside.no_update;
+        return 0;
     }
     """,
     Output('current-time-store', 'data'),
@@ -185,7 +182,7 @@ def auto_update_playback(current_time, user_clicked):
         return dash.no_update, dash.no_update, False
     
     # Skip if no valid time
-    if current_time is None or current_time <= 0:
+    if current_time is None or current_time < 0:
         return dash.no_update, dash.no_update, False
     
     # Find active segment
