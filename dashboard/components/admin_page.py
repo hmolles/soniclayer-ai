@@ -209,6 +209,9 @@ def render_admin_page():
                 # Store to track which persona is being edited
                 dcc.Store(id="editing-persona-id", data=None),
                 
+                # Toast notification for save feedback
+                html.Div(id="save-toast", style={"display": "none"}),
+                
                 # Container for persona cards (will be updated by callback)
                 html.Div(id="personas-list")
             ], style={

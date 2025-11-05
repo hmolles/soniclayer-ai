@@ -550,6 +550,8 @@ def handle_edit_buttons(edit_clicks, cancel_clicks):
 # Callback 8: Handle Save button clicks to persist persona changes
 @app.callback(
     Output('editing-persona-id', 'data', allow_duplicate=True),
+    Output('save-toast', 'children', allow_duplicate=True),
+    Output('save-toast', 'style', allow_duplicate=True),
     Input({'type': 'save-persona-btn', 'id': ALL}, 'n_clicks'),
     State({'type': 'edit-name', 'id': ALL}, 'value'),
     State({'type': 'edit-emoji', 'id': ALL}, 'value'),
@@ -587,18 +589,34 @@ def save_persona_changes(save_clicks, names, emojis, descriptions, system_prompt
         print(f"[SAVE] Error: Could not find persona {persona_id}")
         raise PreventUpdate
     
-    # Get the values for this specific persona
-    new_name = names[persona_index] if persona_index < len(names) else ""
-    new_emoji = emojis[persona_index] if persona_index < len(emojis) else ""
-    new_description = descriptions[persona_index] if persona_index < len(descriptions) else ""
-    new_system_prompt = system_prompts[persona_index] if persona_index < len(system_prompts) else ""
-    new_user_template = user_templates[persona_index] if persona_index < len(user_templates) else ""
+    # IMPORTANT: When only ONE persona is in edit mode, there's only ONE set of form fields
+    # So we should always use index 0 for the currently-editing persona's values
+    # The arrays contain values ONLY for personas in edit mode, not all personas
+    new_name = names[0] if len(names) > 0 else ""
+    new_emoji = emojis[0] if len(emojis) > 0 else ""
+    new_description = descriptions[0] if len(descriptions) > 0 else ""
+    new_system_prompt = system_prompts[0] if len(system_prompts) > 0 else ""
+    new_user_template = user_templates[0] if len(user_templates) > 0 else ""
     
     # Safety check: Don't save if critical fields are empty
     if not new_name or not new_emoji:
         print(f"[SAVE] ❌ Aborted: Name or emoji is empty for {persona_id}")
         print(f"  Name: '{new_name}', Emoji: '{new_emoji}'")
-        raise PreventUpdate
+        error_toast = html.Div("❌ Error: Name and emoji are required!", style={
+            "position": "fixed",
+            "top": "20px",
+            "right": "20px",
+            "backgroundColor": "#ef4444",
+            "color": "white",
+            "padding": "12px 20px",
+            "borderRadius": "6px",
+            "fontSize": "14px",
+            "fontWeight": "500",
+            "boxShadow": "0 4px 6px rgba(0,0,0,0.1)",
+            "zIndex": "10000",
+            "display": "block"
+        })
+        return dash.no_update, error_toast, {"display": "block"}
     
     print(f"[SAVE] Saving changes for persona: {persona_id}")
     print(f"  Name: {new_name}")
@@ -698,16 +716,43 @@ def get_all_personas():
         langflow_path.write_text(new_langflow_content)
         print(f"[SAVE] Updated langflow_client.py")
         
-        # Success! Close the edit mode
+        # Success! Close the edit mode and show success message
         print(f"[SAVE] ✅ Successfully saved persona: {persona_id}")
-        return None  # This closes the edit form
+        success_toast = html.Div(f"✅ Saved {new_name} successfully!", style={
+            "position": "fixed",
+            "top": "20px",
+            "right": "20px",
+            "backgroundColor": "#10b981",
+            "color": "white",
+            "padding": "12px 20px",
+            "borderRadius": "6px",
+            "fontSize": "14px",
+            "fontWeight": "500",
+            "boxShadow": "0 4px 6px rgba(0,0,0,0.1)",
+            "zIndex": "10000",
+            "display": "block"
+        })
+        return None, success_toast, {"display": "block"}  # Close form + show toast
         
     except Exception as e:
         print(f"[SAVE] ❌ Error saving persona: {str(e)}")
         import traceback
         traceback.print_exc()
-        # Don't close the form if there was an error
-        raise PreventUpdate
+        error_toast = html.Div(f"❌ Error: {str(e)}", style={
+            "position": "fixed",
+            "top": "20px",
+            "right": "20px",
+            "backgroundColor": "#ef4444",
+            "color": "white",
+            "padding": "12px 20px",
+            "borderRadius": "6px",
+            "fontSize": "14px",
+            "fontWeight": "500",
+            "boxShadow": "0 4px 6px rgba(0,0,0,0.1)",
+            "zIndex": "10000",
+            "display": "block"
+        })
+        return dash.no_update, error_toast, {"display": "block"}
 
 
 # Callback 1b: Update selected audio store when file button clicked
