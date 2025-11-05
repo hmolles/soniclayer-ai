@@ -565,8 +565,11 @@ def save_persona_changes(save_clicks, names, emojis, descriptions, system_prompt
         raise PreventUpdate
     
     triggered_id = ctx.triggered[0]['prop_id']
+    triggered_value = ctx.triggered[0]['value']
     
-    if 'save-persona-btn' not in triggered_id:
+    # Only proceed if Save button was actually clicked (not just rendered)
+    # The value should be > 0 and the trigger should be from save button
+    if 'save-persona-btn' not in triggered_id or not triggered_value:
         raise PreventUpdate
     
     # Parse which persona was saved
@@ -590,6 +593,12 @@ def save_persona_changes(save_clicks, names, emojis, descriptions, system_prompt
     new_description = descriptions[persona_index] if persona_index < len(descriptions) else ""
     new_system_prompt = system_prompts[persona_index] if persona_index < len(system_prompts) else ""
     new_user_template = user_templates[persona_index] if persona_index < len(user_templates) else ""
+    
+    # Safety check: Don't save if critical fields are empty
+    if not new_name or not new_emoji:
+        print(f"[SAVE] ❌ Aborted: Name or emoji is empty for {persona_id}")
+        print(f"  Name: '{new_name}', Emoji: '{new_emoji}'")
+        raise PreventUpdate
     
     print(f"[SAVE] Saving changes for persona: {persona_id}")
     print(f"  Name: {new_name}")
