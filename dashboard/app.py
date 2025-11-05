@@ -1447,7 +1447,7 @@ def update_summary_tab(audio_id):
             html.Div([
                 html.Span(persona["emoji"], style={"fontSize": "32px", "marginRight": "12px"}),
                 html.Div([
-                    html.H3(persona["name"], style={
+                    html.H3(persona["display_name"], style={
                         "margin": "0",
                         "fontSize": "18px",
                         "color": "#111827"
