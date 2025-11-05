@@ -121,6 +121,25 @@ app.layout = html.Div([
     "backgroundColor": "#f3f4f6",
     "minHeight": "100vh"
 })
+# Clientside callback to update current time from audio player
+app.clientside_callback(
+    """
+    function(n_intervals) {
+        // Find the audio element
+        const audioElement = document.getElementById('audio-player');
+        
+        // If audio element exists and is playing, return current time
+        if (audioElement && !audioElement.paused) {
+            return audioElement.currentTime;
+        }
+        
+        // If paused or not found, return current value (no update)
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('current-time-store', 'data'),
+    Input('playback-sync', 'n_intervals')
+)
 
 # Callback 1: Auto-update waveform and metadata during playback
 @app.callback(
