@@ -204,25 +204,15 @@ def create_persona(n_clicks, persona_id, display_name, emoji, description, promp
             "border": "1px solid #dc2626"
         }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
-    # Validate JSON
+    # Parse JSON (try to parse, but use as-is if it fails)
     try:
         parsed_prompt = json.loads(prompt_json)
-        if 'system' not in parsed_prompt or 'user_template' not in parsed_prompt:
-            return html.Div("❌ JSON must contain 'system' and 'user_template' fields", style={
-                "color": "#dc2626",
-                "padding": "12px",
-                "backgroundColor": "#fee2e2",
-                "borderRadius": "6px",
-                "border": "1px solid #dc2626"
-            }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
-    except json.JSONDecodeError as e:
-        return html.Div(f"❌ Invalid JSON: {str(e)}", style={
-            "color": "#dc2626",
-            "padding": "12px",
-            "backgroundColor": "#fee2e2",
-            "borderRadius": "6px",
-            "border": "1px solid #dc2626"
-        }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    except:
+        # If not valid JSON, create a simple structure
+        parsed_prompt = {
+            "system": prompt_json,
+            "user_template": "Evaluate: {text}"
+        }
     
     # Save persona to config files
     try:
