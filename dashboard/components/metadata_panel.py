@@ -1,5 +1,11 @@
 """Metadata panel component for displaying segment information."""
 from dash import html
+import sys
+from pathlib import Path
+
+# Add parent directory to path to import from app
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from app.config.personas import get_all_personas
 
 
 def get_score_color(score):
@@ -141,7 +147,7 @@ def render_metadata_panel(segment):
     Render metadata panel for a segment with persona evaluations.
     
     Args:
-        segment: Dict with keys: topic, tone, transcript, genz, advertiser, note
+        segment: Dict with keys: topic, tone, transcript, and dynamically loaded persona data
         
     Returns:
         Dash HTML component or None
@@ -162,8 +168,6 @@ def render_metadata_panel(segment):
     tone = segment.get("tone", "Unknown")
     transcript = segment.get("transcript", "")
     note = segment.get("note", "")
-    genz_data = segment.get("genz")
-    advertiser_data = segment.get("advertiser")
     
     # Check if segment is instrumental/music only (very short or empty transcript)
     is_instrumental = len(transcript.strip()) < 20
@@ -214,11 +218,17 @@ def render_metadata_panel(segment):
             )
         ], style={"marginBottom": "20px"}),
         
-        # Persona evaluations
+        # Persona evaluations - dynamically render all registered personas
         html.Div([
             html.H4("🎯 Persona Evaluations", style={"marginBottom": "12px", "color": "#111827"}),
-            render_persona_card("🔥 Gen Z", genz_data, "🔥"),
-            render_persona_card("💼 Advertiser", advertiser_data, "💼"),
+            *[
+                render_persona_card(
+                    f"{persona['emoji']} {persona['display_name']}", 
+                    segment.get(persona['id']),
+                    persona['emoji']
+                )
+                for persona in get_all_personas()
+            ]
         ]),
         
         # Additional note
