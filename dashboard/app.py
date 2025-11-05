@@ -18,7 +18,7 @@ print(f"Dashboard server starting...")
 print(f"Default audio for command-line mode: {default_audio_id}")
 
 # Initialize Dash app
-app = Dash(__name__, assets_folder='assets', suppress_callback_exceptions=True)
+app = Dash(__name__, assets_folder='assets')
 
 # Add audio proxy endpoint to serve audio through port 5000
 @app.server.route('/audio/<audio_id>')
@@ -43,37 +43,8 @@ def proxy_audio(audio_id):
         return Response(f"Error fetching audio: {str(e)}", status=500)
 
 
-def render_dashboard_page(audio_id):
-    """Render the main dashboard page for a specific audio file"""
-    audio_path = f"uploads/{audio_id}.wav"
-    
-    # Check if file exists
-    if not Path(audio_path).exists():
-        return html.Div([
-            html.H1("⚠️ Audio File Not Found"),
-            html.P(f"Audio ID: {audio_id}"),
-            html.P("This audio file does not exist in the uploads folder."),
-            html.A("← Back to Files", href="/files", style={
-                "color": "#3b82f6",
-                "textDecoration": "none"
-            })
-        ], style={"padding": "40px"})
-    
-    print(f"Loading dashboard for audio: {audio_id}")
-    time, amplitude = extract_waveform(audio_path)
-    segments = fetch_segments(audio_id)
-    print(f"Loaded {len(segments)} segments")
-    
-    # Debug: Print first 3 segments to understand structure
-    if segments:
-        print("\n=== First 3 Segments ===")
-        for i, seg in enumerate(segments[:3]):
-            print(f"Segment {i}: {seg['start']:.2f}s - {seg['end']:.2f}s")
-            print(f"  Transcript: {seg.get('transcript', 'NO TRANSCRIPT')[:80]}")
-            print(f"  Topic: {seg.get('topic', 'N/A')}, Tone: {seg.get('tone', 'N/A')}")
-        print("========================\n")
-    
-    # Return dashboard layout
+def create_dashboard_layout():
+    """Create the dashboard page structure (will be populated dynamically)"""
     return html.Div([
         # Header with navigation
         html.Div([
@@ -83,7 +54,7 @@ def render_dashboard_page(audio_id):
                     "color": "#111827",
                     "fontSize": "28px"
                 }),
-                html.P(f"Audio ID: {audio_id[:16]}...", style={
+                html.P(id="dashboard-audio-id-display", children="Select an audio file from Files", style={
                     "margin": "4px 0 0 0",
                     "color": "#6b7280",
                     "fontSize": "14px"
@@ -102,10 +73,10 @@ def render_dashboard_page(audio_id):
         html.Div([
             # Left column - Waveform and audio player
             html.Div([
-                render_audio_player(audio_id),
+                html.Div(id="audio-player-container"),
                 dcc.Graph(
                     id="waveform-graph",
-                    figure=render_waveform_with_highlight(time, amplitude, segments),
+                    figure={},
                     style={"height": "400px"},
                     config={'displayModeBar': False}
                 ),
@@ -118,6 +89,7 @@ def render_dashboard_page(audio_id):
             # Right column - Metadata panel
             html.Div(
                 id="segment-metadata",
+                children=html.Div("Select an audio file to view analysis", style={"padding": "20px"}),
                 style={
                     "width": "450px",
                     "backgroundColor": "#ffffff",
@@ -138,29 +110,40 @@ def render_dashboard_page(audio_id):
         dcc.Interval(id="playback-sync", interval=1000, n_intervals=0),
         dcc.Store(id="user-clicked", data=False),
         dcc.Store(id='current-time-store', data=0),
-        dcc.Store(id='current-audio-id', data=audio_id),
-        dcc.Store(id='segments-store', data=segments),
-        dcc.Store(id='waveform-data-store', data={'time': time.tolist(), 'amplitude': amplitude.tolist()}),
-    ])
+        dcc.Store(id='current-audio-id', data=None),
+        dcc.Store(id='segments-store', data=[]),
+        dcc.Store(id='waveform-data-store', data={'time': [], 'amplitude': []}),
+    ], id="dashboard-page", style={"display": "none"})
 
-# Main app layout with routing
+# Main app layout with all pages
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content')
+    
+    # File Browser Page
+    html.Div(id="file-browser-page", children=render_file_browser(), style={"display": "none"}),
+    
+    # Dashboard Page
+    create_dashboard_layout(),
+    
+    # Admin Page
+    html.Div(id="admin-page", children=render_admin_page(), style={"display": "none"}),
+    
 ], style={
     "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
     "backgroundColor": "#f3f4f6",
     "minHeight": "100vh"
 })
 
-# Routing callback
+# Routing callback - toggle page visibility
 @app.callback(
-    Output('page-content', 'children'),
+    Output('file-browser-page', 'style'),
+    Output('dashboard-page', 'style'),
+    Output('admin-page', 'style'),
     Input('url', 'pathname'),
     Input('url', 'search')
 )
-def display_page(pathname, search):
-    """Route to the appropriate page based on pathname and query parameters"""
+def toggle_pages(pathname, search):
+    """Show/hide pages based on pathname"""
     
     # Handle URL-encoded query strings in pathname (screenshot tool quirk)
     if '%3F' in pathname or '?' in pathname:
@@ -175,77 +158,85 @@ def display_page(pathname, search):
                 pathname, search = pathname.split('?', 1)
                 search = '?' + search
     
+    # Default styles
+    hidden = {"display": "none"}
+    visible = {"display": "block"}
+    
     if pathname == '/admin':
-        # Admin page
-        return html.Div([
-            html.Div([
-                html.H1("🎵 SonicLayer AI", style={
-                    "margin": "0",
-                    "color": "#111827",
-                    "fontSize": "28px"
-                }),
-                render_navigation("/admin")
-            ], style={
-                "padding": "20px",
-                "backgroundColor": "#ffffff",
-                "borderBottom": "2px solid #e5e7eb",
-                "marginBottom": "20px",
-                "position": "relative"
-            }),
-            render_admin_page()
-        ])
-    
+        return hidden, hidden, visible
+    elif pathname == '/dashboard' or (pathname == '/' and search and 'audio_id=' in search):
+        return hidden, visible, hidden
     elif pathname == '/files' or pathname == '/':
-        # File browser page
-        return html.Div([
-            html.Div([
-                html.H1("🎵 SonicLayer AI", style={
-                    "margin": "0",
-                    "color": "#111827",
-                    "fontSize": "28px"
-                }),
-                render_navigation("/files")
-            ], style={
-                "padding": "20px",
-                "backgroundColor": "#ffffff",
-                "borderBottom": "2px solid #e5e7eb",
-                "marginBottom": "20px",
-                "position": "relative"
-            }),
-            render_file_browser()
-        ])
-    
-    elif pathname == '/dashboard':
-        # Dashboard page - get audio_id from query string
-        from urllib.parse import parse_qs
-        
-        audio_id = default_audio_id  # Default
-        if search:
-            params = parse_qs(search.lstrip('?'))
-            if 'audio_id' in params:
-                audio_id = params['audio_id'][0]
-        
-        return render_dashboard_page(audio_id)
-    
+        return visible, hidden, hidden
     else:
         # Default to file browser
-        return html.Div([
-            html.Div([
-                html.H1("🎵 SonicLayer AI", style={
-                    "margin": "0",
-                    "color": "#111827",
-                    "fontSize": "28px"
-                }),
-                render_navigation("/files")
-            ], style={
-                "padding": "20px",
-                "backgroundColor": "#ffffff",
-                "borderBottom": "2px solid #e5e7eb",
-                "marginBottom": "20px",
-                "position": "relative"
-            }),
-            render_file_browser()
-        ])
+        return visible, hidden, hidden
+
+# Load dashboard data when audio_id changes in URL
+@app.callback(
+    Output('current-audio-id', 'data'),
+    Output('segments-store', 'data'),
+    Output('waveform-data-store', 'data'),
+    Output('audio-player-container', 'children'),
+    Output('waveform-graph', 'figure'),
+    Output('dashboard-audio-id-display', 'children'),
+    Input('url', 'pathname'),
+    Input('url', 'search')
+)
+def load_dashboard_data(pathname, search):
+    """Load audio data when URL changes to dashboard with audio_id"""
+    
+    # Handle URL-encoded query strings
+    if '%3F' in pathname or '?' in pathname:
+        if '?' in pathname:
+            pathname, search = pathname.split('?', 1)
+            search = '?' + search
+        else:
+            import urllib.parse
+            pathname = urllib.parse.unquote(pathname)
+            if '?' in pathname:
+                pathname, search = pathname.split('?', 1)
+                search = '?' + search
+    
+    # Only load if we're on the dashboard page
+    if pathname != '/dashboard' and not (pathname == '/' and search and 'audio_id=' in search):
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    
+    # Extract audio_id from URL
+    audio_id = None
+    if search:
+        import urllib.parse
+        params = urllib.parse.parse_qs(search.lstrip('?'))
+        audio_id = params.get('audio_id', [None])[0]
+    
+    if not audio_id:
+        # No audio selected
+        empty_fig = {}
+        return None, [], {'time': [], 'amplitude': []}, html.Div("Select an audio file from Files"), empty_fig, "Select an audio file from Files"
+    
+    # Load audio data
+    audio_path = f"uploads/{audio_id}.wav"
+    if not Path(audio_path).exists():
+        error_msg = f"Audio file not found: {audio_id[:16]}..."
+        empty_fig = {}
+        return None, [], {'time': [], 'amplitude': []}, html.Div(error_msg), empty_fig, error_msg
+    
+    print(f"Loading dashboard data for audio: {audio_id}")
+    import numpy as np
+    time, amplitude = extract_waveform(audio_path)
+    segments = fetch_segments(audio_id)
+    print(f"Loaded {len(segments)} segments")
+    
+    # Create initial figure
+    fig = render_waveform_with_highlight(time, amplitude, segments)
+    
+    # Create audio player
+    player = render_audio_player(audio_id)
+    
+    # Display text
+    display_text = f"Audio ID: {audio_id[:16]}..."
+    
+    return audio_id, segments, {'time': time.tolist(), 'amplitude': amplitude.tolist()}, player, fig, display_text
 
 # Persona creation callback
 @app.callback(
@@ -512,7 +503,7 @@ app.clientside_callback(
         return window.dash_clientside.no_update;
     }
     """,
-    Output('audio-player', 'id'),  # Dummy output (we just need to trigger on click)
+    Output('user-clicked', 'data', allow_duplicate=True),
     Input('waveform-graph', 'clickData'),
     prevent_initial_call=True
 )
