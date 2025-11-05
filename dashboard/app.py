@@ -1330,31 +1330,39 @@ def process_transcript(audio_id, transcript_segments, classifier_results):
         }), dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 
-# NOTE: Clientside callbacks commented out - causing issues with Dash version
-# The dashboard still functions correctly without them using server-side updates
-# 
-# # Clientside callback to update current time from audio player
-# app.clientside_callback(
-#     dict(
-#         namespace='clientside',
-#         function_name='update_current_time'
-#     ),
-#     Output('current-time-store', 'data'),
-#     Input('playback-sync', 'n_intervals'),
-#     prevent_initial_call=True
-# )
-# 
-# 
-# # Clientside callback to seek audio when waveform is clicked
-# app.clientside_callback(
-#     dict(
-#         namespace='clientside',
-#         function_name='seek_audio'
-#     ),
-#     Output('waveform-click-dummy', 'data', allow_duplicate=True),
-#     Input('waveform-graph', 'clickData'),
-#     prevent_initial_call=True
-# )
+# Clientside callback to update current time from audio player
+app.clientside_callback(
+    """
+    function(n_intervals) {
+        var audioElement = document.getElementById('audio-player');
+        if (audioElement && !isNaN(audioElement.currentTime)) {
+            return audioElement.currentTime;
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('current-time-store', 'data'),
+    Input('playback-sync', 'n_intervals'),
+    prevent_initial_call=True
+)
+
+
+# Clientside callback to seek audio when waveform is clicked
+app.clientside_callback(
+    """
+    function(click_data) {
+        if (!click_data) return window.dash_clientside.no_update;
+        var audioElement = document.getElementById('audio-player');
+        if (audioElement) {
+            audioElement.currentTime = click_data.points[0].x;
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('waveform-click-dummy', 'data', allow_duplicate=True),
+    Input('waveform-graph', 'clickData'),
+    prevent_initial_call=True
+)
 
 
 # Callback 4: Auto-update waveform and metadata during playback (THE CORE FEATURE)
