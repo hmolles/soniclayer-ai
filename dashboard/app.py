@@ -679,10 +679,14 @@ def get_all_personas():
         "user_template": {json.dumps(new_user_template)}
     }}'''
         
-        # Try to replace using regex
-        new_langflow_content = re.sub(pattern, new_chain, langflow_content, flags=re.DOTALL)
+        # Try to replace using regex (but catch errors if replacement string has escape sequences)
+        try:
+            new_langflow_content = re.sub(pattern, new_chain, langflow_content, flags=re.DOTALL)
+        except re.error:
+            # Regex failed (likely due to escape sequences in replacement string)
+            new_langflow_content = langflow_content
         
-        # If regex didn't match, try a simpler approach
+        # If regex didn't match or failed, use manual approach
         if new_langflow_content == langflow_content:
             # Manual replacement - find the chain and replace it
             # This is more robust for multi-line strings
