@@ -112,7 +112,7 @@ app.layout = html.Div([
     }),
     
     # Hidden components for state management
-    dcc.Interval(id="playback-sync", interval=500, n_intervals=0),
+    dcc.Interval(id="playback-sync", interval=1000, n_intervals=0),
     dcc.Store(id="user-clicked", data=False),
     dcc.Store(id='current-time-store', data=0),
     
@@ -165,45 +165,53 @@ app.clientside_callback(
     Output('audio-player', 'id'),  # Dummy output (we just need to trigger on click)
     Input('waveform-graph', 'clickData')
 )
+
+# Global state to track current segment
+_current_segment_index = -1
 # Callback 1: Auto-update waveform and metadata during playback
 @app.callback(
     Output("waveform-graph", "figure"),
     Output("segment-metadata", "children", allow_duplicate=True),
     Output("user-clicked", "data", allow_duplicate=True),
-    Input("playback-sync", "n_intervals"),
     Input('current-time-store', 'data'),
     State("user-clicked", "data"),
     prevent_initial_call=True
 )
-def auto_update_playback(n_intervals, current_time, user_clicked):
-    # If user just clicked, skip this update
-    if user_clicked:
-        # Keep current figure, keep current metadata, reset flag
-        fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time if current_time else 0)
-        return fig, dash.no_update, False
+def auto_update_playback(current_time, user_clicked):
+    global _current_segment_index
     
-    # Normal auto-update during playback
-    if current_time is None:
-        current_time = 0
+    # If user just clicked, reset flag and return
+    if user_clicked:
+        return dash.no_update, dash.no_update, False
+    
+    # Skip if no valid time
+    if current_time is None or current_time <= 0:
+        return dash.no_update, dash.no_update, False
     
     # Find active segment
     active_segment = None
+    active_index = -1
     for i, seg in enumerate(segments):
         if seg["start"] <= current_time <= seg["end"]:
             active_segment = seg
+            active_index = i
             break
     
+    # No matching segment
     if not active_segment:
-        active_segment = segments[0] if segments else None
-        print(f"DEBUG: No matching segment, using first segment")
+        return dash.no_update, dash.no_update, False
     
-    # Update waveform with cursor
-    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time)
-    
-    # Update metadata
-    metadata = render_metadata_panel(active_segment) if active_segment else "No segment at this time."
-    
-    return fig, metadata, False
+    # Only update metadata if we crossed into a new segment
+    if active_index != _current_segment_index:
+        _current_segment_index = active_index
+        # Update waveform cursor and metadata
+        fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time)
+        metadata = render_metadata_panel(active_segment)
+        return fig, metadata, False
+    else:
+        # Same segment - just update cursor, no metadata change
+        fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time)
+        return fig, dash.no_update, False
 
 # Callback 2: Handle waveform clicks for seeking
 @app.callback(
