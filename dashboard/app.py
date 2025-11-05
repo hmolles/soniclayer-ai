@@ -232,44 +232,60 @@ app.layout = html.Div([
             "position": "relative"
         }),
         
-        # Main content - two columns
-        html.Div([
-            # Left column - Waveform and audio player
-            html.Div([
-                html.Div(id="audio-player-container", children=html.Div(
-                    "Select an audio file to begin",
-                    style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}
-                )),
-                dcc.Graph(
-                    id="waveform-graph",
-                    figure={},
-                    style={"height": "400px"},
-                    config={'displayModeBar': False}
-                ),
-            ], style={
-                "flex": "1",
-                "marginRight": "20px",
-                "minWidth": "0"
-            }),
+        # Tabs for different views
+        dcc.Tabs(id="main-tabs", value="analysis-tab", children=[
+            # Tab 1: Analysis View (current waveform + metadata)
+            dcc.Tab(label="📊 Analysis", value="analysis-tab", children=[
+                html.Div([
+                    # Left column - Waveform and audio player
+                    html.Div([
+                        html.Div(id="audio-player-container", children=html.Div(
+                            "Select an audio file to begin",
+                            style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}
+                        )),
+                        dcc.Graph(
+                            id="waveform-graph",
+                            figure={},
+                            style={"height": "400px"},
+                            config={'displayModeBar': False}
+                        ),
+                    ], style={
+                        "flex": "1",
+                        "marginRight": "20px",
+                        "minWidth": "0"
+                    }),
+                    
+                    # Right column - Metadata panel
+                    html.Div(
+                        id="segment-metadata",
+                        children=html.Div("Select an audio file to view analysis", style={"padding": "20px", "color": "#6b7280"}),
+                        style={
+                            "width": "450px",
+                            "backgroundColor": "#ffffff",
+                            "borderRadius": "8px",
+                            "border": "1px solid #e5e7eb",
+                            "maxHeight": "600px",
+                            "overflowY": "auto",
+                            "boxShadow": "0 1px 3px rgba(0,0,0,0.1)"
+                        }
+                    )
+                ], style={
+                    "display": "flex",
+                    "padding": "20px",
+                })
+            ]),
             
-            # Right column - Metadata panel
-            html.Div(
-                id="segment-metadata",
-                children=html.Div("Select an audio file to view analysis", style={"padding": "20px", "color": "#6b7280"}),
-                style={
-                    "width": "450px",
-                    "backgroundColor": "#ffffff",
-                    "borderRadius": "8px",
-                    "border": "1px solid #e5e7eb",
-                    "maxHeight": "600px",
-                    "overflowY": "auto",
-                    "boxShadow": "0 1px 3px rgba(0,0,0,0.1)"
-                }
-            )
+            # Tab 2: Summary View (new aggregated stats)
+            dcc.Tab(label="📈 Summary", value="summary-tab", children=[
+                html.Div(id="summary-content", children=html.Div(
+                    "Select an audio file to view summary",
+                    style={"padding": "40px", "color": "#6b7280", "textAlign": "center", "fontSize": "16px"}
+                ), style={
+                    "padding": "20px"
+                })
+            ])
         ], style={
-            "display": "flex",
-            "padding": "0 20px",
-            "marginBottom": "20px"
+            "marginBottom": "0"
         }),
         
         # Hidden components for state management
