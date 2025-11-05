@@ -1,0 +1,96 @@
+📋 IMPLEMENTATION PLAN
+PART 1: Audio File Browser & Selector
+Location: New navigation tab or home page
+
+Components Needed:
+
+Scan uploads/ folder for .wav files
+Extract audio_id (filename without extension)
+Display as clickable list/grid with metadata:
+Audio ID (shortened, e.g., 50f531...)
+File size
+Upload date (from file modified time)
+Number of segments (from Redis or segments file)
+Preview which personas have evaluated it
+User Flow:
+
+Home/Files Page
+├── Card: Audio 50f531... (256 MB, 18 segments, 2/3 personas)
+│   └── [View Dashboard] button → redirects to /dashboard?audio_id=50f531...
+├── Card: Audio abc123... (128 MB, 12 segments, 3/3 personas)
+│   └── [View Dashboard] button
+
+Technical Details:
+
+Update dashboard routing to accept ?audio_id= query parameter
+Current dashboard loads audio_id from command line arg → change to URL param
+Add new route / or /files for file browser
+PART 2: Persona Editor in Admin
+Location: Admin page → expand existing personas list
+
+Features:
+
+2a. Edit Existing Persona
+Click persona card → expands to edit mode
+Editable fields:
+Display Name
+Emoji
+Description
+System Prompt (textarea)
+User Template Prompt (textarea)
+[Save Changes] button
+[Cancel] button
+2b. After Saving Changes
+Show success message
+Offer choice:
+✅ Persona updated successfully!
+Re-evaluate existing audio with updated prompt?
+[Select Audio to Re-evaluate] [Skip for Now]
+
+If "Select Audio" → show modal/dropdown with audio files
+User picks files → trigger re-evaluation
+Technical Details:
+
+Read current prompt from langflow_client.py PERSONA_PROMPTS
+Update langflow_client.py when saving
+No need to update worker file (it just calls the chain)
+Re-evaluation = call existing worker's process_transcript() function
+PART 3: Bulk Audio Re-evaluation
+Location: Admin page → new section "Re-evaluate Audio"
+
+Layout:
+
+┌─────────────────────────────────────────┐
+│ 🔄 Re-evaluate Audio                    │
+├─────────────────────────────────────────┤
+│ Select Audio:                           │
+│ ☐ 50f531... (18 segments)               │
+│ ☐ abc123... (12 segments)               │
+│ ☑ def456... (24 segments)               │
+│                                         │
+│ Select Personas:                        │
+│ ☐ Gen Z                                 │
+│ ☑ Advertiser                            │
+│ ☑ Business Owner (new)                  │
+│                                         │
+│ [Re-evaluate Selected] button           │
+└─────────────────────────────────────────┘
+
+User Flow:
+
+Select one or more audio files
+Select one or more personas (default: all)
+Click "Re-evaluate"
+Show progress: "Processing 1/3 audio files..."
+For each audio:
+Fetch segments from backend
+Call selected persona workers
+Update Redis with new evaluations
+Show completion: "✅ Re-evaluated 3 files with 2 personas"
+Technical Details:
+
+Backend needs new endpoint: POST /api/re-evaluate
+Accepts: {audio_ids: [], persona_ids: []}
+Returns: {status: "processing", job_id: "..."}
+OR trigger workers directly from dashboard (Python subprocess)
+Progress tracking via Redis or polling
