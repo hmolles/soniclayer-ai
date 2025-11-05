@@ -110,6 +110,15 @@ def call_langflow_chain(flow_name: str, segment: dict) -> dict:
         
         result_text = content.strip()
         
+        # Strip markdown code blocks if present (Azure sometimes wraps JSON in ```json ... ```)
+        if result_text.startswith("```json"):
+            result_text = result_text[7:]  # Remove ```json
+        if result_text.startswith("```"):
+            result_text = result_text[3:]  # Remove ```
+        if result_text.endswith("```"):
+            result_text = result_text[:-3]  # Remove closing ```
+        result_text = result_text.strip()
+        
         # Parse JSON response
         data = json.loads(result_text)
         
