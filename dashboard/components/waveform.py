@@ -20,7 +20,7 @@ def render_waveform_with_highlight(time, amplitude, segments, cursor_position=No
         y=amplitude,
         mode='lines',
         name='Waveform',
-        line=dict(color='#0f172a')  # slate-900 dark color
+        line=dict(color='lightblue')
     ))
 
     # Use cached min/max if provided, otherwise calculate
@@ -29,7 +29,7 @@ def render_waveform_with_highlight(time, amplitude, segments, cursor_position=No
 
     for seg in segments:
         is_active = cursor_position and seg["start"] <= cursor_position <= seg["end"]
-        fill = "rgba(200, 200, 255, 0.4)" if is_active else "rgba(255, 255, 255, 0.0)"  # Light blue for active, transparent white for inactive
+        fill = "rgba(255, 0, 0, 0.4)" if is_active else "rgba(255, 0, 0, 0.2)"
 
         fig.add_shape(
             type="rect",

@@ -328,8 +328,8 @@ app.layout = html.Div([
                 })
             ]),
             
-            # Tab 2: Insights View (aggregated stats)
-            dcc.Tab(label="Insights", value="summary-tab",
+            # Tab 2: Summary View (new aggregated stats)
+            dcc.Tab(label="Summary", value="summary-tab",
                 style={
                     "padding": "12px 20px",
                     "fontSize": "13px",
@@ -1366,10 +1366,10 @@ app.clientside_callback(
             audioElement.currentTime = clicked_time;
         }
         
-        return true;
+        return window.dash_clientside.no_update;
     }
     """,
-    Output('user-clicked', 'data', allow_duplicate=True),
+    Output('waveform-click-dummy', 'data', allow_duplicate=True),
     Input('waveform-graph', 'clickData'),
     prevent_initial_call=True
 )
@@ -1443,6 +1443,37 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked):
         return fig, metadata, False
     else:
         return fig, dash.no_update, False
+
+
+# Callback 5: Handle waveform clicks for seeking (note: clientside callback handles audio seeking)
+@app.callback(
+    Output("segment-metadata", "children", allow_duplicate=True),
+    Output("user-clicked", "data", allow_duplicate=True),
+    Input("waveform-graph", "clickData"),
+    State("segments-store", "data"),
+    prevent_initial_call=True
+)
+def handle_waveform_click(click_data, segments):
+    if click_data is None or not segments:
+        return dash.no_update, dash.no_update
+    
+    # Get clicked time from waveform
+    clicked_time = click_data['points'][0]['x']
+    
+    # Find the segment containing this time
+    active_segment = next(
+        (seg for seg in segments if seg["start"] <= clicked_time <= seg["end"]),
+        None
+    )
+    
+    # Update metadata
+    metadata = render_metadata_panel(active_segment) if active_segment else html.Div(
+        "No segment at this time position.",
+        style={"padding": "20px", "color": "#6b7280"}
+    )
+    
+    # Set user-clicked flag
+    return metadata, True
 
 
 # ============================================================================
