@@ -32,11 +32,11 @@ def render_file_browser():
     file_cards = []
     
     for audio in audio_files:
-        # Use display_name (original filename) if available, otherwise shorten audio_id
-        display_text = audio.get("display_name", audio["audio_id"][:16] + "...")
+        # Shorten audio_id for display
+        short_id = audio["audio_id"][:16] + "..."
         
         card = html.Div([
-            # Header with audio icon and display name
+            # Header with audio icon and ID
             html.Div([
                 html.Span("🎵", style={
                     "fontSize": "32px",
@@ -44,7 +44,7 @@ def render_file_browser():
                     "flexShrink": "0"
                 }),
                 html.Div([
-                    html.Div(display_text, style={
+                    html.Div(short_id, style={
                         "fontSize": "16px",
                         "fontWeight": "600",
                         "color": "#111827",

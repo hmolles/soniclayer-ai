@@ -1,7 +1,7 @@
 import plotly.graph_objects as go
 from dash import dcc
 
-def render_waveform_with_highlight(time, amplitude, segments, cursor_position=None, amp_min=None, amp_max=None, audio_id=None):
+def render_waveform_with_highlight(time, amplitude, segments, cursor_position=None, amp_min=None, amp_max=None):
     """
     Render waveform with segment highlights and optional cursor.
     
@@ -12,7 +12,6 @@ def render_waveform_with_highlight(time, amplitude, segments, cursor_position=No
         cursor_position: Current playback position (optional)
         amp_min: Cached minimum amplitude (optional, for performance)
         amp_max: Cached maximum amplitude (optional, for performance)
-        audio_id: Audio file ID to display as title (optional)
     """
     fig = go.Figure()
 
@@ -52,30 +51,12 @@ def render_waveform_with_highlight(time, amplitude, segments, cursor_position=No
             line=dict(color="blue", width=2, dash="dot")
         )
 
-    # Set title - use audio_id if provided, otherwise default text
-    title_text = audio_id if audio_id else "Audio Waveform with Segment Highlight"
-    
     fig.update_layout(
-        title=dict(
-            text=title_text,
-            font=dict(
-                size=13,
-                color="#94a3b8"  # slate-400, matching header style
-            ),
-            x=0,  # Left-align
-            xanchor='left'
-        ),
-        xaxis=dict(
-            title="",  # Remove x-axis title
-            showticklabels=False  # Hide x-axis tick labels
-        ),
-        yaxis=dict(
-            title="",  # Remove y-axis title
-            showticklabels=False  # Hide y-axis tick labels
-        ),
+        title="Audio Waveform with Segment Highlight",
+        xaxis_title="Time (s)",
+        yaxis_title="Amplitude",
         height=400,
-        margin=dict(l=40, r=40, t=40, b=40),
-        uirevision='constant'  # Prevent Plotly from resetting zoom/pan on updates
+        margin=dict(l=40, r=40, t=40, b=40)
     )
 
     return fig

@@ -16,7 +16,6 @@ from personas_config import get_all_personas
 # Import persona prompts from langflow_client for editing
 sys.path.insert(0, str(Path(__file__).parent.parent / "app"))
 from services.langflow_client import PERSONA_PROMPTS
-from services.cache import redis_conn
 
 # Get default audio_id from command line (for backwards compatibility)
 default_audio_id = sys.argv[1] if len(sys.argv) > 1 else None
@@ -148,9 +147,7 @@ def create_file_sidebar():
                 "padding": "12px",
                 "marginBottom": "4px",
                 "backgroundColor": "#fafafa" if is_selected else "transparent",  # Minimal background
-                "borderTop": "none",
-                "borderRight": "none",
-                "borderBottom": "none",
+                "border": "none",  # NO borders - extreme minimalism
                 "borderLeft": f"2px solid {'#0f172a' if is_selected else 'transparent'}",  # Subtle left accent only
                 "borderRadius": "0",  # No rounded corners
                 "cursor": "pointer",
@@ -209,20 +206,29 @@ app.layout = html.Div([
                     "fontSize": "14px",
                     "fontWeight": "500",
                     "color": "#0f172a",  # slate-900
+                    "marginRight": "12px"
+                }),
+                html.Span("·", style={
+                    "fontSize": "14px",
+                    "color": "#cbd5e1",  # slate-300
+                    "marginRight": "12px"
+                }),
+                html.Span(id="dashboard-audio-id-display", children="Select a file", style={
+                    "fontSize": "13px",
+                    "color": "#94a3b8",  # slate-400
+                    "fontWeight": "400",
+                    "maxWidth": "300px",
+                    "overflow": "hidden",
+                    "textOverflow": "ellipsis",
+                    "whiteSpace": "nowrap",
+                    "display": "inline-block"
                 })
             ], style={
                 "display": "flex",
                 "alignItems": "center"
             }),
-            # Right section - dark mode toggle and admin button
+            # Right section - admin button
             html.Div([
-                html.Button(
-                    id="dark-mode-toggle",
-                    n_clicks=0,
-                    style={
-                        "marginRight": "8px"
-                    }
-                ),
                 html.Button("Admin", id="admin-toggle-btn", n_clicks=0, style={
                     "padding": "6px 12px",
                     "borderRadius": "4px",
@@ -234,7 +240,7 @@ app.layout = html.Div([
                     "cursor": "pointer",
                     "transition": "all 0.15s ease"
                 })
-            ], style={"display": "flex", "alignItems": "center"})
+            ])
         ], style={
             "display": "flex",
             "justifyContent": "space-between",
@@ -273,36 +279,24 @@ app.layout = html.Div([
                 },
                 children=[
                 html.Div([
-                    # Left column - Waveform, audio player, and summary
+                    # Left column - Waveform and audio player
                     html.Div([
-                        # Waveform at top
+                        # Collapsible summary panel (Phase 3)
+                        html.Div(id="summary-panel-container", children=html.Div(
+                            "Loading summary...",
+                            style={"padding": "20px", "color": "#94a3b8", "fontStyle": "normal", "fontSize": "13px"}
+                        )),
+                        
+                        html.Div(id="audio-player-container", children=html.Div(
+                            "Select an audio file to begin",
+                            style={"padding": "32px 20px", "color": "#94a3b8", "textAlign": "center", "fontSize": "13px"}
+                        )),
                         dcc.Graph(
                             id="waveform-graph",
                             figure={},
                             style={"height": "400px"},
                             config={'displayModeBar': False}
                         ),
-                        
-                        # Audio player controls below waveform (initially empty, populated by callback)
-                        html.Div(
-                            id="audio-player-container",
-                            children=html.Div(
-                                "Select an audio file to load player",
-                                style={
-                                    "padding": "20px",
-                                    "color": "#6b7280",
-                                    "textAlign": "center",
-                                    "marginBottom": "20px",
-                                    "marginTop": "10px"
-                                }
-                            )
-                        ),
-                        
-                        # Collapsible summary panel at bottom
-                        html.Div(id="summary-panel-container", children=html.Div(
-                            "Loading summary...",
-                            style={"padding": "20px", "color": "#94a3b8", "fontStyle": "normal", "fontSize": "13px"}
-                        )),
                     ], style={
                         "flex": "1",
                         "marginRight": "20px",
@@ -372,7 +366,7 @@ app.layout = html.Div([
         ]),
         
         # Hidden components for state management
-        dcc.Interval(id="playback-sync", interval=1000, n_intervals=0),  # Update every second
+        dcc.Interval(id="playback-sync", interval=250, n_intervals=0),  # 250ms for smooth tracking
         dcc.Store(id="user-clicked", data=False),
         dcc.Store(id='current-time-store', data=0),
         dcc.Store(id='current-audio-id', data=default_audio_id),
@@ -1056,18 +1050,6 @@ def update_selected_audio(*n_clicks_list):
     raise PreventUpdate
 
 
-# Helper function to get display name for audio file
-def get_audio_display_name(audio_id):
-    """Get the original filename if available, otherwise use truncated hash."""
-    # Try to fetch original filename from Redis
-    original_name = redis_conn.get(f"original_filename:{audio_id}")
-    if original_name:
-        return original_name.decode('utf-8') if isinstance(original_name, bytes) else original_name
-    
-    # Fallback to truncated hash
-    return f"{audio_id[:12]}..." if len(audio_id) > 12 else audio_id
-
-
 # Callback 2: Handle file selection and load data
 @app.callback(
     Output('current-audio-id', 'data'),
@@ -1075,12 +1057,12 @@ def get_audio_display_name(audio_id):
     Output('waveform-data-store', 'data'),
     Output('audio-player-container', 'children'),
     Output('waveform-graph', 'figure', allow_duplicate=True),
+    Output('dashboard-audio-id-display', 'children'),
     Output('segment-metadata', 'children', allow_duplicate=True),
     Input('selected-audio-store', 'data'),
-    State('current-audio-id', 'data'),
     prevent_initial_call='initial_duplicate'
 )
-def load_audio_file(audio_id, current_audio_id):
+def load_audio_file(audio_id):
     import numpy as np
     
     print(f"[LOAD_AUDIO] Loading audio_id: {audio_id}")
@@ -1088,12 +1070,6 @@ def load_audio_file(audio_id, current_audio_id):
     # If no audio selected, use default
     if not audio_id:
         audio_id = default_audio_id
-    
-    # CRITICAL FIX: If audio_id hasn't changed, don't recreate the player!
-    # Return current audio_id to update the store, but no_update for everything else
-    if audio_id == current_audio_id and current_audio_id is not None:
-        print(f"[LOAD_AUDIO] Audio already loaded ({audio_id}), preventing player recreation")
-        return audio_id, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # If still no audio_id, return empty state
     if not audio_id:
@@ -1103,6 +1079,7 @@ def load_audio_file(audio_id, current_audio_id):
             {'time': [], 'amplitude': [], 'amp_min': 0, 'amp_max': 0},
             html.Div("Select an audio file to begin", style={"padding": "20px", "color": "#6b7280", "textAlign": "center"}),
             {},
+            "Select a file",
             html.Div("Select an audio file to view analysis", style={"padding": "20px", "color": "#6b7280"})
         )
     
@@ -1128,11 +1105,12 @@ def load_audio_file(audio_id, current_audio_id):
     # Create audio player
     player = render_audio_player(audio_id)
     
-    # Get display name (original filename if available)
-    display_name = get_audio_display_name(audio_id)
+    # Create initial waveform
+    fig = render_waveform_with_highlight(time, amplitude, segments, amp_min=amp_min, amp_max=amp_max)
     
-    # Create initial waveform with display name as title
-    fig = render_waveform_with_highlight(time, amplitude, segments, amp_min=amp_min, amp_max=amp_max, audio_id=display_name)
+    # Display text - cleaner format for minimal header
+    # Truncate to 12 chars for compact display
+    display_text = f"{audio_id[:12]}..." if len(audio_id) > 12 else audio_id
     
     # Initial metadata (first segment)
     if segments and len(segments) > 0:
@@ -1151,6 +1129,7 @@ def load_audio_file(audio_id, current_audio_id):
         },
         player,
         fig,
+        display_text,
         metadata
     )
 
@@ -1353,37 +1332,10 @@ def process_transcript(audio_id, transcript_segments, classifier_results):
 
 # Clientside callback to update current time from audio player
 app.clientside_callback(
-    """
-    function(n_intervals) {
-        try {
-            const audioElement = document.getElementById('audio-player');
-            
-            // Log every 5 intervals for debugging
-            if (n_intervals % 5 === 0) {
-                console.log('[Playback Sync] Interval:', n_intervals, 'Audio element:', audioElement ? 'found' : 'NOT FOUND');
-            }
-            
-            if (!audioElement) {
-                return -1;  // Return -1 instead of no_update so we can see it's running
-            }
-            
-            const currentTime = audioElement.currentTime;
-            
-            if (n_intervals % 5 === 0) {
-                console.log('[Playback Sync] currentTime:', currentTime, 'paused:', audioElement.paused);
-            }
-            
-            if (currentTime !== undefined && !isNaN(currentTime)) {
-                return currentTime;
-            }
-            
-            return 0;  // Return 0 if currentTime is invalid
-        } catch (error) {
-            console.error('[Playback Sync] Error:', error);
-            return -999;  // Return error code
-        }
-    }
-    """,
+    dict(
+        namespace='clientside',
+        function_name='update_current_time'
+    ),
     Output('current-time-store', 'data'),
     Input('playback-sync', 'n_intervals'),
     prevent_initial_call=True
@@ -1392,21 +1344,10 @@ app.clientside_callback(
 
 # Clientside callback to seek audio when waveform is clicked
 app.clientside_callback(
-    """
-    function(click_data) {
-        if (!click_data) {
-            return window.dash_clientside.no_update;
-        }
-        
-        const clicked_time = click_data.points[0].x;
-        const audioElement = document.getElementById('audio-player');
-        if (audioElement) {
-            audioElement.currentTime = clicked_time;
-        }
-        
-        return true;
-    }
-    """,
+    dict(
+        namespace='clientside',
+        function_name='seek_audio'
+    ),
     Output('user-clicked', 'data', allow_duplicate=True),
     Input('waveform-graph', 'clickData'),
     prevent_initial_call=True
@@ -1422,19 +1363,10 @@ app.clientside_callback(
     State("segments-store", "data"),
     State("waveform-data-store", "data"),
     State("user-clicked", "data"),
-    State("current-audio-id", "data"),
     prevent_initial_call=True
 )
-def auto_update_playback(current_time, segments, waveform_data, user_clicked, audio_id):
+def auto_update_playback(current_time, segments, waveform_data, user_clicked):
     import numpy as np
-    
-    # Decode sentinel values from clientside callback
-    if current_time == -1:
-        print("[AUTO_UPDATE] Clientside callback: Audio element NOT FOUND")
-        return dash.no_update, dash.no_update, dash.no_update
-    elif current_time == -999:
-        print("[AUTO_UPDATE] Clientside callback: JavaScript ERROR")
-        return dash.no_update, dash.no_update, dash.no_update
     
     print(f"[AUTO_UPDATE] time={current_time}, user_clicked={user_clicked}, has_segments={bool(segments)}, has_waveform={bool(waveform_data)}")
     
@@ -1481,26 +1413,14 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked, au
     if active_segment:
         print(f"[AUTO_UPDATE] Active segment: {active_segment.get('start')}-{active_segment.get('end')}")
     
-    # Get display name (original filename if available)
-    display_name = get_audio_display_name(audio_id) if audio_id else None
-    
-    # Update waveform with cursor (pass cached min/max for performance and display name for title)
-    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time, amp_min=amp_min, amp_max=amp_max, audio_id=display_name)
+    # Update waveform with cursor (pass cached min/max for performance)
+    fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time, amp_min=amp_min, amp_max=amp_max)
     
     # Update metadata
     if active_segment:
-        # TEMPORARY DEBUG: Return simple text instead of complex component
-        metadata = html.Div([
-            html.H3(f"⏱️ Time: {current_time:.2f}s", style={"color": "red", "fontSize": "24px"}),
-            html.P(f"Segment: {active_segment.get('start')}-{active_segment.get('end')}", style={"color": "blue", "fontSize": "18px"}),
-            html.P(f"Topic: {active_segment.get('topic', 'Unknown')}", style={"color": "green"})
-        ])
-        metadata_type = type(metadata).__name__ if metadata else "None"
-        print(f"[AUTO_UPDATE] ✅ Updated waveform cursor to {current_time:.2f}s and metadata for segment {active_segment.get('start')}-{active_segment.get('end')}")
-        print(f"[AUTO_UPDATE] Metadata component type: {metadata_type}")
+        metadata = render_metadata_panel(active_segment)
         return fig, metadata, False
     else:
-        print(f"[AUTO_UPDATE] ✅ Updated waveform cursor to {current_time:.2f}s (no active segment)")
         return fig, dash.no_update, False
 
 
@@ -1549,31 +1469,32 @@ def update_summary_panel(summary_data, is_collapsed):
         )
     
     # Use the summary_panel component to render
-    return render_collapsible_summary(personas, summary_data, is_expanded=True)  # Always expanded
+    return render_collapsible_summary(personas, summary_data, is_expanded=not is_collapsed)
 
 
-# Callback 6.3: Toggle summary collapse state - DISABLED (always visible now)
-# @app.callback(
-#     Output('summary-collapsed', 'data'),
-#     Output('summary-panel-container', 'children', allow_duplicate=True),
-#     Input('summary-collapse-toggle', 'n_clicks'),
-#     State('summary-collapsed', 'data'),
-#     State('summary-data-store', 'data'),
-#     prevent_initial_call=True
-# )
-# def toggle_summary_collapse(n_clicks, is_collapsed, summary_data):
-#     """Toggle the collapse state and re-render the summary panel."""
-#     if summary_data is None:
-#         raise PreventUpdate
-#     
-#     # Toggle state
-#     new_collapsed = not is_collapsed
-#     
-#     # Re-render the entire panel with new state
-#     personas = get_all_personas()
-#     new_panel = render_collapsible_summary(personas, summary_data, is_expanded=not new_collapsed)
-#     
-#     return new_collapsed, new_panel
+# Callback 6.3: Toggle summary collapse state (Phase 3) - SIMPLIFIED
+# Only update the collapse state store. The panel re-render is handled by update_summary_panel.
+@app.callback(
+    Output('summary-collapsed', 'data'),
+    Output('summary-panel-container', 'children', allow_duplicate=True),
+    Input('summary-collapse-toggle', 'n_clicks'),
+    State('summary-collapsed', 'data'),
+    State('summary-data-store', 'data'),
+    prevent_initial_call=True
+)
+def toggle_summary_collapse(n_clicks, is_collapsed, summary_data):
+    """Toggle the collapse state and re-render the summary panel."""
+    if summary_data is None:
+        raise PreventUpdate
+    
+    # Toggle state
+    new_collapsed = not is_collapsed
+    
+    # Re-render the entire panel with new state
+    personas = get_all_personas()
+    new_panel = render_collapsible_summary(personas, summary_data, is_expanded=not new_collapsed)
+    
+    return new_collapsed, new_panel
 
 
 # ============================================================================

@@ -8,10 +8,14 @@ def render_audio_player(audio_id: str):
             controls=True,
             style={
                 'width': '100%',
+                'borderRadius': '8px',
                 'outline': 'none'
             }
         )
     ], style={
         'marginBottom': '20px',
-        'marginTop': '10px'
+        'padding': '10px',
+        'backgroundColor': '#ffffff',
+        'borderRadius': '8px',
+        'border': '1px solid #e5e7eb'
     })
