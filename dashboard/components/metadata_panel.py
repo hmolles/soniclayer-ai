@@ -176,6 +176,9 @@ def render_metadata_panel(segment):
     if is_instrumental and not note:
         note = "🎵 Instrumental/Music section"
     
+    # Add key based on segment timing to force React re-render
+    segment_key = f"{segment.get('start', 0)}-{segment.get('end', 0)}"
+    
     return html.Div([
         # Segment header
         html.Div([
@@ -198,6 +201,8 @@ def render_metadata_panel(segment):
                     "borderRadius": "4px",
                     "fontSize": "13px"
                 })
+            ], style={"marginBottom": "12px"})
+        ]),
             ], style={"marginBottom": "12px"}),
         ], style={"marginBottom": "16px"}),
         
@@ -250,4 +255,4 @@ def render_metadata_panel(segment):
         "padding": "20px",
         "height": "100%",
         "overflowY": "auto"
-    })
+    }, key=segment_key)

@@ -1447,12 +1447,16 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked):
     # Update waveform with cursor (pass cached min/max for performance)
     fig = render_waveform_with_highlight(time, amplitude, segments, cursor_position=current_time, amp_min=amp_min, amp_max=amp_max)
     
-    # Update metadata
+    # Update metadata - always render to force UI update
     if active_segment:
         metadata = render_metadata_panel(active_segment)
-        return fig, metadata, False
     else:
-        return fig, dash.no_update, False
+        metadata = html.Div(
+            "No segment at this time position.",
+            style={"padding": "20px", "color": "#6b7280"}
+        )
+    
+    return fig, metadata, False
 
 
 # Callback 5: Handle waveform clicks for seeking (note: clientside callback handles audio seeking)
