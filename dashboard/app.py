@@ -1489,8 +1489,12 @@ def auto_update_playback(current_time, segments, waveform_data, user_clicked, au
     
     # Update metadata
     if active_segment:
-        metadata = render_metadata_panel(active_segment)
-        # Log metadata component type for debugging
+        # TEMPORARY DEBUG: Return simple text instead of complex component
+        metadata = html.Div([
+            html.H3(f"⏱️ Time: {current_time:.2f}s", style={"color": "red", "fontSize": "24px"}),
+            html.P(f"Segment: {active_segment.get('start')}-{active_segment.get('end')}", style={"color": "blue", "fontSize": "18px"}),
+            html.P(f"Topic: {active_segment.get('topic', 'Unknown')}", style={"color": "green"})
+        ])
         metadata_type = type(metadata).__name__ if metadata else "None"
         print(f"[AUTO_UPDATE] ✅ Updated waveform cursor to {current_time:.2f}s and metadata for segment {active_segment.get('start')}-{active_segment.get('end')}")
         print(f"[AUTO_UPDATE] Metadata component type: {metadata_type}")
