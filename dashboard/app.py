@@ -366,7 +366,7 @@ app.layout = html.Div([
         ]),
         
         # Hidden components for state management
-        dcc.Interval(id="playback-sync", interval=250, n_intervals=0),  # 250ms for smooth tracking
+        dcc.Interval(id="playback-sync", interval=1000, n_intervals=0),  # Update every second
         dcc.Store(id="user-clicked", data=False),
         dcc.Store(id='current-time-store', data=0),
         dcc.Store(id='current-audio-id', data=default_audio_id),
