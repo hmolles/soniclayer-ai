@@ -1332,10 +1332,19 @@ def process_transcript(audio_id, transcript_segments, classifier_results):
 
 # Clientside callback to update current time from audio player
 app.clientside_callback(
-    dict(
-        namespace='clientside',
-        function_name='update_current_time'
-    ),
+    """
+    function(n_intervals) {
+        const audioElement = document.getElementById('audio-player');
+        
+        if (audioElement && audioElement.currentTime !== undefined && !isNaN(audioElement.currentTime)) {
+            console.log('[CLIENTSIDE] Audio time:', audioElement.currentTime);
+            return audioElement.currentTime;
+        }
+        
+        console.log('[CLIENTSIDE] No audio element or invalid time');
+        return window.dash_clientside.no_update;
+    }
+    """,
     Output('current-time-store', 'data'),
     Input('playback-sync', 'n_intervals'),
     prevent_initial_call=True
@@ -1344,10 +1353,22 @@ app.clientside_callback(
 
 # Clientside callback to seek audio when waveform is clicked
 app.clientside_callback(
-    dict(
-        namespace='clientside',
-        function_name='seek_audio'
-    ),
+    """
+    function(click_data) {
+        if (!click_data) {
+            return window.dash_clientside.no_update;
+        }
+        
+        const clicked_time = click_data.points[0].x;
+        const audioElement = document.getElementById('audio-player');
+        if (audioElement) {
+            console.log('[CLIENTSIDE] Seeking to:', clicked_time);
+            audioElement.currentTime = clicked_time;
+        }
+        
+        return true;
+    }
+    """,
     Output('user-clicked', 'data', allow_duplicate=True),
     Input('waveform-graph', 'clickData'),
     prevent_initial_call=True
