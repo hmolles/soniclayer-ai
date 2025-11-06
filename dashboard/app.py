@@ -1337,13 +1337,11 @@ app.clientside_callback(
         const audioElement = document.getElementById('audio-player');
         
         if (audioElement && audioElement.currentTime !== undefined && !isNaN(audioElement.currentTime)) {
-            // Only update if audio is actually playing
-            if (!audioElement.paused && audioElement.currentTime > 0) {
-                console.log('[CLIENTSIDE] Audio time:', audioElement.currentTime);
-                return audioElement.currentTime;
-            }
+            console.log('[CLIENTSIDE] Audio time:', audioElement.currentTime);
+            return audioElement.currentTime;
         }
         
+        console.log('[CLIENTSIDE] No audio element or invalid time');
         return window.dash_clientside.no_update;
     }
     """,
