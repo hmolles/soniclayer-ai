@@ -27,6 +27,12 @@ PERSONAS = [
         "display_name": "Stay At Home Mum",
         "emoji": "\u26bd\ufe0f",
         "description": "Stay at home Mum"
+    },
+    {
+        "id": "tradies",
+        "display_name": "Tradies",
+        "emoji": "\ud83d\ude0e",
+        "description": "Tradies"
     }
 ]
 

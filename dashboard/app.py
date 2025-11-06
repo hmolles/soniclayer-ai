@@ -1339,13 +1339,13 @@ app.clientside_callback(
         if (audioElement && audioElement.currentTime !== undefined && !isNaN(audioElement.currentTime)) {
             const currentTime = audioElement.currentTime;
             
-            // Store previous time to avoid unnecessary updates
-            if (!window.lastAudioTime) {
-                window.lastAudioTime = -1;
+            // Initialize if needed
+            if (window.lastAudioTime === undefined) {
+                window.lastAudioTime = currentTime;
             }
             
-            // Only update if time has changed
-            if (currentTime !== window.lastAudioTime) {
+            // Only update if time has actually changed
+            if (Math.abs(currentTime - window.lastAudioTime) >= 0.1) {
                 console.log('[CLIENTSIDE] Audio time changed:', window.lastAudioTime, '->', currentTime);
                 window.lastAudioTime = currentTime;
                 return currentTime;
