@@ -1337,11 +1337,21 @@ app.clientside_callback(
         const audioElement = document.getElementById('audio-player');
         
         if (audioElement && audioElement.currentTime !== undefined && !isNaN(audioElement.currentTime)) {
-            console.log('[CLIENTSIDE] Audio time:', audioElement.currentTime);
-            return audioElement.currentTime;
+            const currentTime = audioElement.currentTime;
+            
+            // Store previous time to avoid unnecessary updates
+            if (!window.lastAudioTime) {
+                window.lastAudioTime = -1;
+            }
+            
+            // Only update if time has changed
+            if (currentTime !== window.lastAudioTime) {
+                console.log('[CLIENTSIDE] Audio time changed:', window.lastAudioTime, '->', currentTime);
+                window.lastAudioTime = currentTime;
+                return currentTime;
+            }
         }
         
-        console.log('[CLIENTSIDE] No audio element or invalid time');
         return window.dash_clientside.no_update;
     }
     """,
