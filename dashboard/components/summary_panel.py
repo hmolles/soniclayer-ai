@@ -134,8 +134,10 @@ def render_persona_summary_card(persona: dict, stats: dict, compact: bool = Fals
             "padding": "8px 12px",
             "backgroundColor": "#fafafa",
             "borderRadius": "4px",
-            "border": f"1px solid {get_score_color(avg_score)}",
-            "borderLeftWidth": "3px",
+            "borderTop": f"1px solid {get_score_color(avg_score)}",
+            "borderRight": f"1px solid {get_score_color(avg_score)}",
+            "borderBottom": f"1px solid {get_score_color(avg_score)}",
+            "borderLeft": f"3px solid {get_score_color(avg_score)}",
             "minWidth": "140px"
         })
     else:

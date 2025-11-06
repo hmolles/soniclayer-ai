@@ -148,7 +148,9 @@ def create_file_sidebar():
                 "padding": "12px",
                 "marginBottom": "4px",
                 "backgroundColor": "#fafafa" if is_selected else "transparent",  # Minimal background
-                "border": "none",  # NO borders - extreme minimalism
+                "borderTop": "none",
+                "borderRight": "none",
+                "borderBottom": "none",
                 "borderLeft": f"2px solid {'#0f172a' if is_selected else 'transparent'}",  # Subtle left accent only
                 "borderRadius": "0",  # No rounded corners
                 "cursor": "pointer",
